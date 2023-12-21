@@ -3,6 +3,9 @@
 A game where you have to navigate through falling asteroids as long as you can.  
 Share your best score in the discussion channel !
 
+![screenshot-readme](https://github.com/gBloxy/Asteroid-Sprint/assets/121670440/90fe5b0b-7c22-4060-910f-b62f240b247c)
+
+
 ## Play the game
 
 To launch the game, just execute the asteroid_sprint.py file inside the game folder.
