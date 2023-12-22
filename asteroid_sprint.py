@@ -1,19 +1,23 @@
 
 from sys import exit
-from random import randint, uniform
+from random import randint, uniform, choice
 from time import time, ctime
 import pygame
 pygame.init()
 
-from entities import Player, Asteroid
+from entities import Player, Asteroid, load_images
 from vfx import Fire, Line, Polygon
+
+
+def blit_center(surface, surf, center):
+    surface.blit(surf, (center[0] - surf.get_width()/2, center[1] - surf.get_height()/2))
 
 
 class Game():
     def __init__(self):
         self.WIN_SIZE = [525, 650]
         self.window = pygame.display.set_mode(self.WIN_SIZE)
-        pygame.display.set_caption('Asteroid Sprinter')
+        pygame.display.set_caption('Asteroid Sprint')
         
         self.clock = pygame.time.Clock()
         self.dt = 0
@@ -25,12 +29,17 @@ class Game():
         self.mouse_pos = (0, 0)
         
         self.setup_ui()
+        
+        self.asteroid_images = load_images('asset\\asteroids\\')
     
     def setup_ui(self):
         self.game_over_msg = pygame.font.SysFont('impact', 80).render('GAME OVER', True, 'red')
         self.game_over_msg_pos = (self.WIN_SIZE[0]/2 - self.game_over_msg.get_width()/2,
-                                  self.WIN_SIZE[1]/2 - self.game_over_msg.get_height()/2)
+                                  self.WIN_SIZE[1]/2 - self.game_over_msg.get_height()/2 - 80)
         self.time_font = pygame.font.SysFont('impact', 25)
+        self.time_msg_font = pygame.font.SysFont('impact', 50)
+        self.time_msg = pygame.font.SysFont('impact', 45).render('Time :', True, 'red')
+        self.time_msg_pos = (self.WIN_SIZE[0]/2 - self.time_msg.get_width()/2, self.game_over_msg_pos[1]+110)
         
     def get_events(self):
         self.keys = pygame.key.get_pressed()
@@ -44,26 +53,25 @@ class Game():
                 exit()
         self.mouse_pos = pygame.mouse.get_pos()
     
-    def add_asteroid(self, pos, size, velocity, color):
-        self.asteroids.append(Asteroid(pos, size, velocity, color))
+    def add_asteroid(self, pos, size, velocity, image, motion_x):
+        self.asteroids.append(Asteroid(pos, size, velocity, image, motion=[motion_x, 1]))
     
     def add_particle(self):
         x = randint(0, self.WIN_SIZE[0])
-        y = -10
         radius = randint(1, 3)
         r = randint(180, 220)
         color = (r, r, randint(200, 255))
-        p = [x, y, radius, color]
+        p = [x, -10, radius, color]
         self.particles.append(p)
         return p
     
     def spawn_asteroid(self):
         x = randint(0, self.WIN_SIZE[0])
-        y = -45
-        velocity = uniform(-2.5, 4)
-        size = randint(30, 85)
-        color = randint(80, 180)
-        self.add_asteroid((x, y), size, velocity, (color, color, color))
+        velocity = uniform(-4, 7)
+        radius = randint(40, 90)
+        motion_x = uniform(0 if x < 75 else -0.2, 0 if x > self.WIN_SIZE[0]-75 else 0.2)
+        image = choice(self.asteroid_images)
+        self.add_asteroid((x, -45), radius, velocity, image, motion_x)
         
     def setup_stars(self):
         for i in range(50):
@@ -71,21 +79,27 @@ class Game():
             self.particles[self.particles.index(p)][1] = randint(0, self.WIN_SIZE[1])
     
     def end_game(self):
+        # variable switch
+        self.player.crash()
         self.fire.alive = False
         self.game_over = True
         self.animation = True
         self.screen_shake = True
         self.timer = 1400
+        # rays / particles effect
         for i in range(13):
             self.vfx_particles.append(Line(self.player.rect.center))
         for i in range(60):
             self.vfx_particles.append(Polygon(self.player.rect.center))
+        # ui things to display time under the game over text
+        self.time_passed = self.time_msg_font.render(str(self.current_time), True, 'green')
+        self.time_passed_pos = (self.WIN_SIZE[0]/2 - self.time_passed.get_width()/2, self.time_msg_pos[1] + 55)
     
     def setup_game(self):
         self.speed = 6
         self.spawn_rate = 2000
         self.max_spawn_rate = 600
-        self.timer = self.spawn_rate
+        self.timer = 0
         self.game_over = False
         
         self.screen_shake = False
@@ -99,7 +113,6 @@ class Game():
         self.player = Player(self.WIN_SIZE[0]//2, self.WIN_SIZE[1]-100, self)
         self.fire = Fire(self)
         self.setup_stars()
-        self.add_asteroid((self.WIN_SIZE[0]//2, 75), 50, 0, 'darkgray')
     
     def run(self):
         self.setup_game()
@@ -167,8 +180,10 @@ class Game():
             
             # update and render asteroids
             for a in self.asteroids:
-                pygame.draw.circle(self.window, a.color,
-                                   (a.rect.centerx + offset, a.rect.centery + offset), a.rect.width)
+                # pygame.draw.circle(self.window, 'yellow', # show the circle hitbox
+                #                     (a.rect.centerx + offset, a.rect.centery + offset), a.radius)
+                blit_center(self.window, pygame.transform.rotate(a.image, a.angle),
+                            (a.rect.centerx + offset, a.rect.centery + offset))
                 if not self.game_over:
                     a.update(self.speed, self.dt/100)
                     if a.rect.top > self.WIN_SIZE[1]+25:
@@ -178,8 +193,10 @@ class Game():
             if not self.game_over:
                 if self.player.update(self.dt/100):
                     self.end_game()
-            pygame.draw.rect(self.window, 'white', self.player.rect)
             self.fire.update_render(self.window, self.dt)
+            # pygame.draw.rect(self.window, 'yellow', self.player.rect) # player hitbox
+            blit_center(self.window, self.player.image, 
+                        (self.player.rect.centerx + offset, self.player.rect.centery + offset))
             
             # render dead animation
             if self.animation:
@@ -201,6 +218,8 @@ class Game():
             self.window.blit(self.time_font.render(str(self.current_time), True, 'green'), (10, 10))
             if self.game_over and not self.animation:
                 self.window.blit(self.game_over_msg, self.game_over_msg_pos)
+                self.window.blit(self.time_msg, self.time_msg_pos)
+                self.window.blit(self.time_passed, self.time_passed_pos)
             
             pygame.display.flip()
 
