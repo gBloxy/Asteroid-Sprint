@@ -3,8 +3,7 @@
 A game where you have to navigate through falling asteroids as long as you can.  
 Share your best score in the discussion channel !
 
-![screenshot-readme](https://github.com/gBloxy/Asteroid-Sprint/assets/121670440/90fe5b0b-7c22-4060-910f-b62f240b247c)
-
+![screenshot-github](https://github.com/gBloxy/Asteroid-Sprint/assets/121670440/b172020f-4ecc-4c42-bac3-32d42f8deb2b)
 
 ## Play the game
 
