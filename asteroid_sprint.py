@@ -5,12 +5,10 @@ from time import time, ctime
 import pygame
 pygame.init()
 
-from entities import Player, Asteroid, load_images
-from vfx import Fire, Line, Polygon
+from entities import Player, Asteroid, load_images, Laser, collide_line, blit_center
+from vfx import Fire, Line, Polygon, blit_glowing_text
+from menu import Menu, AnimatedButton
 
-
-def blit_center(surface, surf, center):
-    surface.blit(surf, (center[0] - surf.get_width()/2, center[1] - surf.get_height()/2))
 
 
 class Game():
@@ -21,36 +19,60 @@ class Game():
         
         self.clock = pygame.time.Clock()
         self.dt = 0
-        self.game_start_time = time()
         self.current_time = time()
         
         self.keys = None
         self.events = []
         self.mouse_pos = (0, 0)
         
-        self.setup_ui()
+        self.menu = Menu(self)
+        self.menu_active = True
         
+        self.setup_ui()
+        self.setup_sound()
         self.asteroid_images = load_images('asset\\asteroids\\')
-    
+        
     def setup_ui(self):
-        self.game_over_msg = pygame.font.SysFont('impact', 80).render('GAME OVER', True, 'red')
-        self.game_over_msg_pos = (self.WIN_SIZE[0]/2 - self.game_over_msg.get_width()/2,
-                                  self.WIN_SIZE[1]/2 - self.game_over_msg.get_height()/2 - 80)
-        self.time_font = pygame.font.SysFont('impact', 25)
-        self.time_msg_font = pygame.font.SysFont('impact', 50)
-        self.time_msg = pygame.font.SysFont('impact', 45).render('Time :', True, 'red')
-        self.time_msg_pos = (self.WIN_SIZE[0]/2 - self.time_msg.get_width()/2, self.game_over_msg_pos[1]+110)
+        self.font = 'asset/conthrax-sb.otf'
+        self.game_over_img = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
+        self.game_over_img = blit_glowing_text(
+            self.game_over_img, (self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2 - 80), 'GAME OVER', pygame.font.Font(self.font, 60), 'white', 'red')
+        self.game_over_img = blit_glowing_text(
+            self.game_over_img, (self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2), 'Time :', pygame.font.Font(self.font, 43), 'white', 'red')
+        self.time_font = pygame.font.Font(self.font, 22)
+        self.sound_on_img = pygame.image.load('asset\\sound_on.png').convert_alpha()
+        self.sound_off_img = pygame.image.load('asset\\sound_off.png').convert_alpha()
+        self.sound_img = self.sound_on_img
+        self.back_to_menu_button = AnimatedButton((self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2 + 150), 'Back to Menu')
+        
+    def setup_sound(self):
+        pygame.mixer.music.load('asset\\Screen Saver.mp3')
+        pygame.mixer.music.play()
+        self.sound = True
+        self.sound_switch_timer = 0
+    
+    def switch_sound(self):
+        self.sound = not self.sound
+        if self.sound:
+            self.sound_img = self.sound_on_img
+            pygame.mixer.music.unpause()
+        else:
+            self.sound_img = self.sound_off_img
+            pygame.mixer.music.pause()
+        self.sound_switch_timer = 200
+        
+    def quit(self):
+        pygame.quit()
+        exit()
         
     def get_events(self):
         self.keys = pygame.key.get_pressed()
         if self.keys[pygame.K_ESCAPE]:
-            pygame.quit()
-            exit()
+            self.quit()
         self.events = pygame.event.get()
         for event in self.events:
             if event.type == pygame.QUIT:
-                pygame.quit()
-                exit()
+                self.quit()
         self.mouse_pos = pygame.mouse.get_pos()
     
     def add_asteroid(self, pos, size, velocity, image, motion_x):
@@ -73,12 +95,26 @@ class Game():
         image = choice(self.asteroid_images)
         self.add_asteroid((x, -45), radius, velocity, image, motion_x)
         
+    def spawn_laser(self):
+        x = randint(-20, self.WIN_SIZE[0]+20)
+        end = randint(50, self.WIN_SIZE[0]-50)
+        self.lasers.append(Laser(x, end))
+        
     def setup_stars(self):
         for i in range(50):
             p = self.add_particle()
             self.particles[self.particles.index(p)][1] = randint(0, self.WIN_SIZE[1])
     
+    def start_game(self):
+        self.menu_active = False
+        self.game_start_time = time()
+        pygame.mouse.set_visible(False)
+        # clear asteroids to avoid player crashing when spawning
+        if self.player.update(self.dt):
+            self.asteroids.clear()
+        
     def end_game(self):
+        pygame.mouse.set_visible(True)
         # variable switch
         self.player.crash()
         self.fire.alive = False
@@ -92,8 +128,13 @@ class Game():
         for i in range(60):
             self.vfx_particles.append(Polygon(self.player.rect.center))
         # ui things to display time under the game over text
-        self.time_passed = self.time_msg_font.render(str(self.current_time), True, 'green')
-        self.time_passed_pos = (self.WIN_SIZE[0]/2 - self.time_passed.get_width()/2, self.time_msg_pos[1] + 55)
+        self.game_over_time_img = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
+        self.game_over_time_img = blit_glowing_text(self.game_over_img, (self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2 + 55), str(self.current_time),
+            pygame.font.Font(self.font, 50), 'white', 'cyan', 6)
+    
+    def reset(self):
+        self.setup_game()
+        self.menu_active = True
     
     def setup_game(self):
         self.speed = 6
@@ -106,7 +147,10 @@ class Game():
         self.screen_shake_power = 0
         self.animation = False
         
+        self.laser_surf = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
+        
         self.asteroids = []
+        self.lasers = []
         self.particles = []
         self.vfx_particles = []
         
@@ -132,6 +176,12 @@ class Game():
             # reset window
             self.window.fill((10,0,60))
             
+            # sound on/off
+            if self.sound_switch_timer > 0:
+                self.sound_switch_timer -= self.dt
+            if self.keys[pygame.K_m] and self.sound_switch_timer <= 0:
+                self.switch_sound()
+            
             # dead animation calcul
             if self.animation:
                 self.screen_shake_power = round(self.timer/10)+5
@@ -149,7 +199,7 @@ class Game():
                 offset = 0
             
             # update level variables
-            if not self.game_over:
+            if not self.game_over and not self.menu_active:
                 self.current_time = ctime(time()-self.game_start_time)[14:19]
                 # increase difficulty
                 self.speed += 0.06 * self.dt/100
@@ -161,15 +211,22 @@ class Game():
                     self.spawn_rate -= 5 * self.dt/100
             
             # render background stars
-            if not self.game_over:
+            if not self.game_over and not self.menu_active:
                 if randint(0, 15) == 0:
                     self.add_particle()
             for p in self.particles:
-                if not self.game_over:
+                if not self.game_over and not self.menu_active:
                     p[1] += 0.5
                     if p[1] > self.WIN_SIZE[1]:
                        self.particles.remove(p)
                 pygame.draw.circle(self.window, p[3], (p[0] + offset/2, p[1] + offset/2), p[2])
+            # self.window.blit(
+            #     pygame.transform.scale(
+            #         bloom_effect24(
+            #             pygame.transform.scale(self.window, (self.WIN_SIZE[0], self.WIN_SIZE[1])), # make the stars shine but low fps
+            #             50),
+            #         self.WIN_SIZE),
+            #     (0, 0))
             
             # spawn new asteroids
             if not self.game_over:
@@ -177,36 +234,50 @@ class Game():
                 if self.timer <= 0:
                     self.spawn_asteroid()
                     self.timer = self.spawn_rate
+                # if randint(0, 400) == 0:
+                #     for i in range(3):
+                #         self.spawn_laser()
             
             # update and render asteroids
             for a in self.asteroids:
-                # pygame.draw.circle(self.window, 'yellow', # show the circle hitbox
-                #                     (a.rect.centerx + offset, a.rect.centery + offset), a.radius)
-                blit_center(self.window, pygame.transform.rotate(a.image, a.angle),
-                            (a.rect.centerx + offset, a.rect.centery + offset))
+                blit_center(self.window, pygame.transform.rotate(a.image, a.angle), (a.rect.centerx + offset, a.rect.centery + offset))
                 if not self.game_over:
                     a.update(self.speed, self.dt/100)
                     if a.rect.top > self.WIN_SIZE[1]+25:
                         self.asteroids.remove(a)
             
+            # update and render lasers
+            if self.lasers:
+                self.laser_surf.fill((0, 0, 0, 0))
+                for l in self.lasers:
+                    l.timer += self.dt
+                    if l.timer <= 1500:
+                        pygame.draw.line(self.laser_surf, (255, 0, 0, 80), (l.x, 0), (l.current(), l.timer), 8)
+                    # elif l.timer <= 2000:
+                    #     for w in range(1, 20):
+                    #         pygame.draw.line(self.laser_surf, (255, 0, 0, 200-w), (l.x, 0), (l.current(), l.timer), 8+w)
+                    elif l.timer < 2500:
+                        pygame.draw.line(self.laser_surf, (255, 0, 0, 200), (l.x, 0), (l.current(), l.timer), 10)
+                        if not self.game_over:
+                            if collide_line((l.x, 0), (l.current(), l.timer), self.player.rect):
+                                self.end_game()
+                    else:
+                        self.lasers.remove(l)
+                    self.window.blit(self.laser_surf, (0, 0))
+            
             # update and render player
-            if not self.game_over:
-                if self.player.update(self.dt/100):
-                    self.end_game()
-            self.fire.update_render(self.window, self.dt)
-            # pygame.draw.rect(self.window, 'yellow', self.player.rect) # player hitbox
-            blit_center(self.window, self.player.image, 
-                        (self.player.rect.centerx + offset, self.player.rect.centery + offset))
+            if not self.menu_active:
+                if not self.game_over:
+                    if self.player.update(self.dt/100):
+                        self.end_game()
+                self.fire.update_render(self.window, self.dt)
+                blit_center(self.window, self.player.image, (self.player.rect.centerx + offset, self.player.rect.centery + offset))
             
             # render dead animation
             if self.animation:
                 # circles around the collision
-                pygame.draw.circle(self.window, 'white', 
-                                   (self.player.rect.centerx+offset, self.player.rect.centery+offset), 
-                                   circle_radius, 5)
-                pygame.draw.circle(self.window, 'white', 
-                                   (self.player.rect.centerx+offset, self.player.rect.centery+offset), 
-                                   circle_radius/3, 3)
+                pygame.draw.circle(self.window, 'white', (self.player.rect.centerx+offset, self.player.rect.centery+offset), circle_radius, 5)
+                pygame.draw.circle(self.window, 'white', (self.player.rect.centerx+offset, self.player.rect.centery+offset), circle_radius/3, 3)
                 # destruction effect
                 for p in self.vfx_particles:
                     p.update(self.dt)
@@ -214,12 +285,22 @@ class Game():
                     if not p.alive:
                         self.vfx_particles.remove(p)
             
+            # render and update menu
+            if self.menu_active:
+                self.menu.update()
+                self.menu.render(self.window)
+            if self.game_over:
+                if self.back_to_menu_button.update(self.dt, self.mouse_pos):
+                    self.reset()
+            
             # indications
-            self.window.blit(self.time_font.render(str(self.current_time), True, 'green'), (10, 10))
+            if not self.menu_active:
+                self.window.blit(self.time_font.render(str(self.current_time), True, 'green'), (8, 8))
+            blit_center(self.window, self.sound_img, (25, self.WIN_SIZE[1]-25))
             if self.game_over and not self.animation:
-                self.window.blit(self.game_over_msg, self.game_over_msg_pos)
-                self.window.blit(self.time_msg, self.time_msg_pos)
-                self.window.blit(self.time_passed, self.time_passed_pos)
+                self.window.blit(self.game_over_img, (0, 0))
+                self.window.blit(self.game_over_time_img, (0, 0))
+                self.back_to_menu_button.render(self.window)
             
             pygame.display.flip()
 

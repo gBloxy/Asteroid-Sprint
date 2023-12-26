@@ -5,7 +5,6 @@ import pygame
 from pygame.math import Vector2
 
 
-
 # FIRE COLORS -----------------------------------------------------------------
 
 palette = ((255, 255, 0 ),
@@ -14,6 +13,20 @@ palette = ((255, 255, 0 ),
            (191, 74 , 46),
            (115, 61 , 56),
            (61 , 38 , 48))[::-1] # reverse the color order
+
+
+# NEON EFFECT -----------------------------------------------------------------
+
+def blit_glowing_text(surf, center, text, font, text_color, glowing_color, gaussian_power=10):
+    sup = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
+    image = font.render(text, True, glowing_color)
+    pos = (center[0]-image.get_width()/2, center[1]-image.get_height()/2)
+    sup.blit(image, pos)
+    blurred = pygame.transform.gaussian_blur(sup, gaussian_power)
+    blurred.blit(font.render(text, True, text_color), pos)
+    final = surf.copy()
+    final.blit(blurred, (0, 0))
+    return final
 
 
 # DEATH EFFECT ----------------------------------------------------------------

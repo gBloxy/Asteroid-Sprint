@@ -5,11 +5,19 @@ from os import listdir
 from random import uniform
 
 
+def blit_center(surface, surf, center):
+    surface.blit(surf, (center[0] - surf.get_width()/2, center[1] - surf.get_height()/2))
+
+
+def lerp(a, b, t):
+    return a + t * (b - a)
+
+
 def load_images(path):
     images = []
     for name in listdir(path):
         if name.endswith('.png'):
-            surf = pygame.image.load(path+name)
+            surf = pygame.image.load(path+name).convert()
             surf.set_colorkey('white')
             images.append(surf)
     return images
@@ -36,6 +44,48 @@ def collide(rect, circle):
     return distance <= circle.width/2
 
 
+def collide_line(line_start, line_end, rect):
+    if rect.collidepoint(line_start) or rect.collidepoint(line_end):
+        return True
+    
+    rect_left = rect.left
+    rect_right = rect.right
+    rect_top = rect.top
+    rect_bottom = rect.bottom
+
+    if line_intersects((rect_left, rect_top), (rect_left, rect_bottom), line_start, line_end):
+        return True
+    if line_intersects((rect_right, rect_top), (rect_right, rect_bottom), line_start, line_end):
+        return True
+    if line_intersects((rect_left, rect_top), (rect_right, rect_top), line_start, line_end):
+        return True
+    if line_intersects((rect_left, rect_bottom), (rect_right, rect_bottom), line_start, line_end):
+        return True
+
+    return False
+
+
+def line_intersects(line1_start, line1_end, line2_start, line2_end):
+    x1, y1 = line1_start
+    x2, y2 = line1_end
+    x3, y3 = line2_start
+    x4, y4 = line2_end
+
+    denominator = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+
+    if denominator == 0:
+        return False  # Lines are parallel
+
+    px = ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / denominator
+    py = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / denominator
+
+    if (min(x1, x2) <= px <= max(x1, x2) and min(y1, y2) <= py <= max(y1, y2) and
+            min(x3, x4) <= px <= max(x3, x4) and min(y3, y4) <= py <= max(y3, y4)):
+        return True
+
+    return False
+
+
 spaceship_image = pygame.image.load('asset\\spaceship.png')
 spaceship_image.set_colorkey('black')
 spaceship_crashed_image = pygame.image.load('asset\\spaceship_crashed.png')
@@ -49,7 +99,7 @@ class Player():
         self.rect.center = (x, y)
         self.velocity = 15 # To implement later
         self.image = spaceship_image
-        
+    
     def crash(self):
         self.image = spaceship_crashed_image
         
@@ -76,3 +126,13 @@ class Asteroid():
         self.angle -= self.rotation
         self.rect.x += self.motion[0] * (speed + self.velocity) * dt
         self.rect.y += self.motion[1] * (speed + self.velocity) * dt
+
+
+class Laser():
+    def __init__(self, x, end):
+        self.x = x
+        self.end = end
+        self.timer = 0
+    
+    def current(self):
+        return lerp(self.x, self.end, self.timer/1000)
