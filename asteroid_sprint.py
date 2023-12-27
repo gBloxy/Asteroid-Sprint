@@ -5,9 +5,9 @@ from time import time, ctime
 import pygame
 pygame.init()
 
-from entities import Player, Asteroid, load_images, Laser, collide_line, blit_center
-from vfx import Fire, Line, Polygon, blit_glowing_text
-from menu import Menu, AnimatedButton
+from scripts.entities import Player, Asteroid, load_images, blit_center
+from scripts.vfx import Fire, Line, Polygon, blit_glowing_text
+from scripts.menu import Menu, AnimatedButton
 
 
 
@@ -36,9 +36,9 @@ class Game():
         self.font = 'asset/conthrax-sb.otf'
         self.game_over_img = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
         self.game_over_img = blit_glowing_text(
-            self.game_over_img, (self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2 - 80), 'GAME OVER', pygame.font.Font(self.font, 60), 'white', 'red')
+            self.game_over_img, 'GAME OVER', pygame.font.Font(self.font, 60), 'white', 'red', center=(self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2 - 80))
         self.game_over_img = blit_glowing_text(
-            self.game_over_img, (self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2), 'Time :', pygame.font.Font(self.font, 43), 'white', 'red')
+            self.game_over_img, 'Time :', pygame.font.Font(self.font, 43), 'white', 'red', center=(self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2))
         self.time_font = pygame.font.Font(self.font, 22)
         self.sound_on_img = pygame.image.load('asset\\sound_on.png').convert_alpha()
         self.sound_off_img = pygame.image.load('asset\\sound_off.png').convert_alpha()
@@ -95,11 +95,6 @@ class Game():
         image = choice(self.asteroid_images)
         self.add_asteroid((x, -45), radius, velocity, image, motion_x)
         
-    def spawn_laser(self):
-        x = randint(-20, self.WIN_SIZE[0]+20)
-        end = randint(50, self.WIN_SIZE[0]-50)
-        self.lasers.append(Laser(x, end))
-        
     def setup_stars(self):
         for i in range(50):
             p = self.add_particle()
@@ -129,8 +124,8 @@ class Game():
             self.vfx_particles.append(Polygon(self.player.rect.center))
         # ui things to display time under the game over text
         self.game_over_time_img = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
-        self.game_over_time_img = blit_glowing_text(self.game_over_img, (self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2 + 55), str(self.current_time),
-            pygame.font.Font(self.font, 50), 'white', 'cyan', 6)
+        self.game_over_time_img = blit_glowing_text(self.game_over_img, str(self.current_time),
+            pygame.font.Font(self.font, 50), 'white', 'cyan', gaussian_power=6, center=(self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2 + 55))
     
     def reset(self):
         self.setup_game()
@@ -147,10 +142,7 @@ class Game():
         self.screen_shake_power = 0
         self.animation = False
         
-        self.laser_surf = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
-        
         self.asteroids = []
-        self.lasers = []
         self.particles = []
         self.vfx_particles = []
         
@@ -220,13 +212,6 @@ class Game():
                     if p[1] > self.WIN_SIZE[1]:
                        self.particles.remove(p)
                 pygame.draw.circle(self.window, p[3], (p[0] + offset/2, p[1] + offset/2), p[2])
-            # self.window.blit(
-            #     pygame.transform.scale(
-            #         bloom_effect24(
-            #             pygame.transform.scale(self.window, (self.WIN_SIZE[0], self.WIN_SIZE[1])), # make the stars shine but low fps
-            #             50),
-            #         self.WIN_SIZE),
-            #     (0, 0))
             
             # spawn new asteroids
             if not self.game_over:
@@ -234,9 +219,6 @@ class Game():
                 if self.timer <= 0:
                     self.spawn_asteroid()
                     self.timer = self.spawn_rate
-                # if randint(0, 400) == 0:
-                #     for i in range(3):
-                #         self.spawn_laser()
             
             # update and render asteroids
             for a in self.asteroids:
@@ -245,25 +227,6 @@ class Game():
                     a.update(self.speed, self.dt/100)
                     if a.rect.top > self.WIN_SIZE[1]+25:
                         self.asteroids.remove(a)
-            
-            # update and render lasers
-            if self.lasers:
-                self.laser_surf.fill((0, 0, 0, 0))
-                for l in self.lasers:
-                    l.timer += self.dt
-                    if l.timer <= 1500:
-                        pygame.draw.line(self.laser_surf, (255, 0, 0, 80), (l.x, 0), (l.current(), l.timer), 8)
-                    # elif l.timer <= 2000:
-                    #     for w in range(1, 20):
-                    #         pygame.draw.line(self.laser_surf, (255, 0, 0, 200-w), (l.x, 0), (l.current(), l.timer), 8+w)
-                    elif l.timer < 2500:
-                        pygame.draw.line(self.laser_surf, (255, 0, 0, 200), (l.x, 0), (l.current(), l.timer), 10)
-                        if not self.game_over:
-                            if collide_line((l.x, 0), (l.current(), l.timer), self.player.rect):
-                                self.end_game()
-                    else:
-                        self.lasers.remove(l)
-                    self.window.blit(self.laser_surf, (0, 0))
             
             # update and render player
             if not self.menu_active:
@@ -290,7 +253,8 @@ class Game():
                 self.menu.update()
                 self.menu.render(self.window)
             if self.game_over:
-                if self.back_to_menu_button.update(self.dt, self.mouse_pos):
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+                if self.back_to_menu_button.update(self.dt):
                     self.reset()
             
             # indications
