@@ -1,26 +1,8 @@
 
 import pygame
 from math import sqrt
-from os import listdir
 from random import uniform
 
-
-def blit_center(surface, surf, center):
-    surface.blit(surf, (center[0] - surf.get_width()/2, center[1] - surf.get_height()/2))
-
-
-def lerp(a, b, t):
-    return a + t * (b - a)
-
-
-def load_images(path):
-    images = []
-    for name in listdir(path):
-        if name.endswith('.png'):
-            surf = pygame.image.load(path+name).convert()
-            surf.set_colorkey('white')
-            images.append(surf)
-    return images
 
 
 def collide(rect, circle):

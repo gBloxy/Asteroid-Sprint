@@ -5,9 +5,10 @@ from time import time, ctime
 import pygame
 pygame.init()
 
-from scripts.entities import Player, Asteroid, load_images, blit_center
+from scripts.entities import Player, Asteroid
 from scripts.vfx import Fire, Line, Polygon, blit_glowing_text
-from scripts.menu import Menu, AnimatedButton
+from scripts.utils import load_image_folder, blit_center, read_file, write_file, time_to_seconds
+import scripts.menu as menu
 
 
 
@@ -25,25 +26,26 @@ class Game():
         self.events = []
         self.mouse_pos = (0, 0)
         
-        self.menu = Menu(self)
-        self.menu_active = True
-        
+        self.best_score = read_file('data\\data.txt')
         self.setup_ui()
+        self.menu = menu.Menu(self)
+        self.menu_active = True
         self.setup_sound()
-        self.asteroid_images = load_images('asset\\asteroids\\')
+        self.asteroid_images = load_image_folder('asset\\asteroids\\')
         
     def setup_ui(self):
-        self.font = 'asset/conthrax-sb.otf'
+        self.font = 'asset/orbitron-bold.otf'
+        menu.fp = self.font
         self.game_over_img = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
         self.game_over_img = blit_glowing_text(
-            self.game_over_img, 'GAME OVER', pygame.font.Font(self.font, 60), 'white', 'red', center=(self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2 - 80))
+            self.game_over_img, 'GAME OVER', pygame.font.Font(self.font, 63), 'white', 'red', center=(self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2 - 150))
         self.game_over_img = blit_glowing_text(
-            self.game_over_img, 'Time :', pygame.font.Font(self.font, 43), 'white', 'red', center=(self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2))
-        self.time_font = pygame.font.Font(self.font, 22)
+            self.game_over_img, 'Time :', pygame.font.Font(self.font, 46), 'white', 'red', center=(self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2 - 60))
+        self.time_font = pygame.font.Font(self.font, 24)
         self.sound_on_img = pygame.image.load('asset\\sound_on.png').convert_alpha()
         self.sound_off_img = pygame.image.load('asset\\sound_off.png').convert_alpha()
         self.sound_img = self.sound_on_img
-        self.back_to_menu_button = AnimatedButton((self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2 + 150), 'Back to Menu')
+        self.back_to_menu_button = menu.AnimatedButton((self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2 + 170), 'Back to Menu')
         
     def setup_sound(self):
         pygame.mixer.music.load('asset\\Screen Saver.mp3')
@@ -62,6 +64,7 @@ class Game():
         self.sound_switch_timer = 200
         
     def quit(self):
+        write_file('data\\data.txt', self.best_score)
         pygame.quit()
         exit()
         
@@ -125,7 +128,12 @@ class Game():
         # ui things to display time under the game over text
         self.game_over_time_img = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
         self.game_over_time_img = blit_glowing_text(self.game_over_img, str(self.current_time),
-            pygame.font.Font(self.font, 50), 'white', 'cyan', gaussian_power=6, center=(self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2 + 55))
+            pygame.font.Font(self.font, 50), 'white', 'cyan', gaussian_power=6, center=(self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2))
+        # check for best score
+        if time_to_seconds(self.current_time) > time_to_seconds(self.best_score):
+            self.best_score = self.current_time
+            self.game_over_time_img = blit_glowing_text(self.game_over_time_img, 'New Best Score !', pygame.font.Font(self.font, 30), 'white', 'lightgreen', 
+                                                        center=(self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2 + 60), gaussian_power=6)
     
     def reset(self):
         self.setup_game()
@@ -259,7 +267,7 @@ class Game():
             
             # indications
             if not self.menu_active:
-                self.window.blit(self.time_font.render(str(self.current_time), True, 'green'), (8, 8))
+                self.window.blit(self.time_font.render(str(self.current_time), True, 'green'), (8, 12))
             blit_center(self.window, self.sound_img, (25, self.WIN_SIZE[1]-25))
             if self.game_over and not self.animation:
                 self.window.blit(self.game_over_img, (0, 0))

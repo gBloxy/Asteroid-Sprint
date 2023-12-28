@@ -2,27 +2,22 @@
 import pygame
 
 from scripts.vfx import blit_glowing_text
-from scripts.entities import blit_center
+from scripts.utils import increase_rect, blit_center
 
 
 fp = 'asset/conthrax-sb.otf' # Font Path
 
-
-def increase_rect(rect, size):
-    center = rect.center
-    rect.inflate_ip(*size)
-    rect.center = center
-
-
+[155, 65]
+[145, 58]
 class Button():
-    def __init__(self, center, text, size=40, border=True, gaussian_power=10):
+    def __init__(self, center, text, font_size=40, size=None, border=True, gaussian_power=10):
         self.image = pygame.Surface((400, 100), pygame.SRCALPHA)
         self.image = blit_glowing_text(
-            self.image, text, pygame.font.Font(fp, size), 'white', 'cyan', gaussian_power, center=(self.image.get_width()/2, self.image.get_height()/2))
+            self.image, text, pygame.font.Font(fp, font_size), 'white', 'cyan', gaussian_power, center=(self.image.get_width()/2, self.image.get_height()/2))
         self.image_rect = self.image.get_rect(center=center)
-        size = list(pygame.font.Font(fp, size).render(text, True, 'white').get_size())
-        self.text_size = size
-        size = [size[0] + 40, size[1] + 10]
+        self.text_size = list(pygame.font.Font(fp, font_size).render(text, True, 'white').get_size())
+        if size is None:
+            size = [self.text_size[0] + 40, self.text_size[1] + 16]
         self.min_size = size[0]
         self.max_size = size[0] + 20
         self.rect = pygame.Rect(0, 0, *size)
@@ -57,12 +52,12 @@ class Button():
     def render(self, surf, offset_x=0):
         surf.blit(self.image, (self.image_rect.x + offset_x, self.image_rect.y))
         if self.border:
-            pygame.draw.rect(surf, 'lightblue', (self.rect.x + offset_x, self.rect.y, self.rect.width, self.rect.height), 3)
+            pygame.draw.rect(surf, 'lightblue', (self.rect.x + offset_x, self.rect.y - 3, self.rect.width, self.rect.height), 3)
 
 
 class AnimatedButton(Button):
-    def __init__(self, center, text):
-        super().__init__(center, text)
+    def __init__(self, center, text, size=None):
+        super().__init__(center, text, size=size)
         self.animation_timer = 450
         self.animated = False
         
@@ -92,7 +87,7 @@ class AnimatedButton(Button):
 
 class ClickableText(Button):
     def __init__(self, center, text, mode='underlined'):
-        super().__init__(center, text, size=15, border=False, gaussian_power=5)
+        super().__init__(center, text, font_size=18, border=False, gaussian_power=5)
         self.rect = pygame.Rect(0, 0, *self.text_size)
         self.rect.center = center
         self.mode = mode
@@ -127,34 +122,39 @@ class Menu():
         
     def create_main_image(self, game):
         image = pygame.Surface(game.WIN_SIZE, pygame.SRCALPHA)
-        image = blit_glowing_text(image, 'ASTEROID', pygame.font.Font(fp, 60), 'white', 'cyan', center=(game.WIN_SIZE[0]/2, 75))
-        image = blit_glowing_text(image, 'SPRINT', pygame.font.Font(fp, 60), 'white', 'cyan', center=(game.WIN_SIZE[0]/2, 150))
-        image = blit_glowing_text(image, 'sound on/off : press [m]', pygame.font.Font(fp, 15), 'white', 'cyan', 3, center=(165, game.WIN_SIZE[1]-25))
-        image = blit_glowing_text(image, 'press [ECHAP] to quit', pygame.font.Font(fp, 15), 'white', 'cyan', 3, center=(game.WIN_SIZE[0]/2, 525))
+        image = blit_glowing_text(image, 'ASTEROID', pygame.font.Font(fp, 63), 'white', 'cyan', center=(game.WIN_SIZE[0]/2, 90))
+        image = blit_glowing_text(image, 'SPRINT', pygame.font.Font(fp, 63), 'white', 'cyan', center=(game.WIN_SIZE[0]/2, 160))
+        image = blit_glowing_text(image, 'sound on/off : press [m]', pygame.font.Font(fp, 18), 'white', 'cyan', 3, center=(170, game.WIN_SIZE[1]-25))
+        image = blit_glowing_text(image, 'press [ECHAP] to quit', pygame.font.Font(fp, 18), 'white', 'cyan', 3, center=(game.WIN_SIZE[0]/2, 550))
         return image
     
     def setup_buttons(self, game):
-        self.play_button = AnimatedButton((game.WIN_SIZE[0]/2, game.WIN_SIZE[1]/2), 'Play')
-        self.quit_button = Button((game.WIN_SIZE[0]/2, 420), 'Quit')
-        self.credits_button = ClickableText((game.WIN_SIZE[0]-50, game.WIN_SIZE[1]-25), 'credits')
+        self.play_button = AnimatedButton((game.WIN_SIZE[0]/2, game.WIN_SIZE[1]/2 - 40), 'Play', size=[152, 62])
+        self.quit_button = Button((game.WIN_SIZE[0]/2, 380), 'Quit', size=[152, 62])
+        self.credits_button = ClickableText((game.WIN_SIZE[0]-55, game.WIN_SIZE[1]-25), 'credits')
         self.credits_close_button = ClickableText((self.credits_rect.right - 27, self.credits_rect.top + 27), 'X', mode='zoomed')
         
     def create_credits_page(self, game):
-        image = pygame.Surface((390, 222), pygame.SRCALPHA)
+        image = pygame.Surface((400, 230), pygame.SRCALPHA)
         pygame.draw.rect(image, 'cyan', (5, 5, image.get_width()-10, image.get_height()-10), 4)
         pygame.draw.rect(image, 'cyan', (10, 10, image.get_width()-20, image.get_height()-20), 4)
         image = pygame.transform.gaussian_blur(image, 4)
         pygame.draw.rect(image, 'white', (9, 9, image.get_width()-18, image.get_height()-18), 2)
-        rect = image.get_rect(center=(game.WIN_SIZE[0]/2, game.WIN_SIZE[1]/2 + 50))
-        image = blit_glowing_text(image, 'INFORMATION AND CREDITS', pygame.font.Font(fp, 16), 'white', 'cyan', 3, topleft=(20, 18))
-        image = blit_glowing_text(image, 'This game was created by g_Bloxy.', pygame.font.Font(fp, 11), 'white', 'cyan', 3, topleft=(20, 54))
-        image = blit_glowing_text(image, 'The spaceship fire trail is a customized version', pygame.font.Font(fp, 11), 'white', 'cyan', 3, topleft=(20, 81))
-        image = blit_glowing_text(image, 'of the fire vfx of @kadir014 on github.', pygame.font.Font(fp, 11), 'white', 'cyan', 3, topleft=(20, 96))
-        image = blit_glowing_text(image, 'The death particles are a customized version', pygame.font.Font(fp, 11), 'white', 'cyan', 3, topleft=(20, 123))
-        image = blit_glowing_text(image, 'of the vfx of @eliczi on github.', pygame.font.Font(fp, 11), 'white', 'cyan', 3, topleft=(20, 138))
-        image = blit_glowing_text(image, 'github : @gBloxy', pygame.font.Font(fp, 11), 'white', 'cyan', 3, topleft=(20, 164))
-        image = blit_glowing_text(image, 'Font used: conthrax', pygame.font.Font(fp, 11), 'white', 'cyan', 3, topleft=(20, 185))
+        rect = image.get_rect(center=(game.WIN_SIZE[0]/2, game.WIN_SIZE[1]/2 + 30))
+        font = pygame.font.Font(fp, 12)
+        image = blit_glowing_text(image, 'INFORMATION AND CREDITS', pygame.font.Font(fp, 17), 'white', 'cyan', 3, topleft=(20, 22))
+        image = blit_glowing_text(image, 'This game was created by g_Bloxy.', font, 'white', 'cyan', 3, topleft=(20, 54))
+        image = blit_glowing_text(image, 'The spaceship fire trail is a customized version', font, 'white', 'cyan', 3, topleft=(20, 81))
+        image = blit_glowing_text(image, 'of the fire vfx of @kadir014 on github.', font, 'white', 'cyan', 3, topleft=(20, 96))
+        image = blit_glowing_text(image, 'The death particles are a customized version', font, 'white', 'cyan', 3, topleft=(20, 123))
+        image = blit_glowing_text(image, 'of the vfx of @eliczi on github.', font, 'white', 'cyan', 3, topleft=(20, 138))
+        image = blit_glowing_text(image, 'github : @gBloxy.', font, 'white', 'cyan', 3, topleft=(20, 164))
+        image = blit_glowing_text(image, 'Font used : orbitron from the league of moveable type.', font, 'white', 'cyan', 3, topleft=(20, 180))
+        image = blit_glowing_text(image, 'Music used : screen saver from Kevin MacLeod.', font, 'white', 'cyan', 3, topleft=(20, 196))
         return image, rect
+    
+    def set_best_score(self, score):
+        ...
         
     def update(self):
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
