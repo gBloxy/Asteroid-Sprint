@@ -35,5 +35,6 @@ All feedbacks are welcome.
 This game and all its images were created by g_Bloxy.  
 The spaceship fire trail is a customized version of the [fire vfx](https://github.com/kadir014/pygame-vfx) of @kadir014 on github.  
 The death particles are a customized version of the [vfx](https://github.com/eliczi/vfx) of @eliczi on github.  
-Font used: [conthrax](https://typodermicfonts.com/conthrax/) from typodermic fonts.
-Music used: screen saver.
+Font used: [conthrax](https://typodermicfonts.com/conthrax/) from typodermic fonts.  
+Music used: "Screen Saver" Kevin MacLeod ([incompetech.com](https://incompetech.com)) Licensed under Creative Commons: By Attribution 4.0 License  
+You can find all licenses in the licenses folder.
