@@ -5,9 +5,8 @@ Share your best score in the discussion channel !
 
 ## Screenshots
 
-![Capture](https://github.com/gBloxy/Asteroid-Sprint/assets/121670440/c3648cc8-c451-4a83-822b-af77333e3f67)
-![capture final](https://github.com/gBloxy/Asteroid-Sprint/assets/121670440/4610ee5e-d42f-4c8b-8a17-0d6c65cd38bf)
-
+![screenshot-menu](https://github.com/gBloxy/Asteroid-Sprint/assets/121670440/8b43974f-b84f-4d69-97ce-25892f830872)
+![screenshot-game](https://github.com/gBloxy/Asteroid-Sprint/assets/121670440/8eb55c49-5933-4b2b-9340-9aa65a2630c5)
 
 ## Play the game
 
