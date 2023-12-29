@@ -6,7 +6,7 @@ import pygame
 pygame.init()
 
 from scripts.entities import Player, Asteroid
-from scripts.vfx import Fire, Line, Polygon, blit_glowing_text
+from scripts.vfx import Fire, Line, Polygon, blit_glowing_text, generate_glowing_text
 from scripts.utils import load_image_folder, blit_center, read_file, write_file, time_to_seconds
 import scripts.menu as menu
 
@@ -126,14 +126,14 @@ class Game():
         for i in range(60):
             self.vfx_particles.append(Polygon(self.player.rect.center))
         # ui things to display time under the game over text
-        self.game_over_time_img = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
-        self.game_over_time_img = blit_glowing_text(self.game_over_img, str(self.current_time),
+        self.game_over_time_img = generate_glowing_text(self.WIN_SIZE, str(self.current_time),
             pygame.font.Font(self.font, 50), 'white', 'cyan', gaussian_power=6, center=(self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2))
         # check for best score
         if time_to_seconds(self.current_time) > time_to_seconds(self.best_score):
             self.best_score = self.current_time
             self.game_over_time_img = blit_glowing_text(self.game_over_time_img, 'New Best Score !', pygame.font.Font(self.font, 30), 'white', 'lightgreen', 
-                                                        center=(self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2 + 60), gaussian_power=6)
+                                                        center=(self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2 + 60), gaussian_power=6, mode=1)
+            self.menu.set_best_score(self.current_time)
     
     def reset(self):
         self.setup_game()
@@ -267,7 +267,7 @@ class Game():
             
             # indications
             if not self.menu_active:
-                self.window.blit(self.time_font.render(str(self.current_time), True, 'green'), (8, 12))
+                self.window.blit(self.time_font.render(str(self.current_time), True, 'cyan'), (8, 12))
             blit_center(self.window, self.sound_img, (25, self.WIN_SIZE[1]-25))
             if self.game_over and not self.animation:
                 self.window.blit(self.game_over_img, (0, 0))

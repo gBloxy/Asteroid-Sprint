@@ -1,14 +1,13 @@
 
 import pygame
 
-from scripts.vfx import blit_glowing_text
+from scripts.vfx import blit_glowing_text, generate_glowing_text
 from scripts.utils import increase_rect, blit_center
 
 
 fp = 'asset/conthrax-sb.otf' # Font Path
 
-[155, 65]
-[145, 58]
+
 class Button():
     def __init__(self, center, text, font_size=40, size=None, border=True, gaussian_power=10):
         self.image = pygame.Surface((400, 100), pygame.SRCALPHA)
@@ -119,6 +118,7 @@ class Menu():
         self.credits_anim_sens = -1
         self.credits_active = False
         self.offset_x = 0
+        self.set_best_score(game.best_score)
         
     def create_main_image(self, game):
         image = pygame.Surface(game.WIN_SIZE, pygame.SRCALPHA)
@@ -154,7 +154,8 @@ class Menu():
         return image, rect
     
     def set_best_score(self, score):
-        ...
+        self.best_score_img = generate_glowing_text(
+            self.g.WIN_SIZE, 'best score : '+score, pygame.font.Font(fp, 25), 'white', 'cyan', 4, center=(self.g.WIN_SIZE[0]/2, 475), mode=1)
         
     def update(self):
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
@@ -195,3 +196,5 @@ class Menu():
         elif self.credits_active:
             surf.blit(self.credits_image, self.credits_rect)
             self.credits_close_button.render(surf)
+        else:
+            surf.blit(self.best_score_img, (0, 0))

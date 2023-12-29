@@ -17,19 +17,32 @@ palette = ((255, 255, 0 ),
 
 # NEON EFFECT -----------------------------------------------------------------
 
-def blit_glowing_text(surf, text, font, text_color, glowing_color, gaussian_power=10, center=None, topleft=None):
+def blit_glowing_text(surf, text, font, text_color, glowing_color, gaussian_power=10, center=None, topleft=None, mode=0):
     sup = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
     image = font.render(text, True, glowing_color)
-    if center is not None:
-        pos = (center[0]-image.get_width()/2, center[1]-image.get_height()/2)
-    elif topleft is not None:
-        pos = topleft
+    pos = (center[0]-image.get_width()/2, center[1]-image.get_height()/2) if center is not None else topleft
     sup.blit(image, pos)
-    blurred = pygame.transform.gaussian_blur(sup, gaussian_power)
+    if mode == 0:
+        blurred = pygame.transform.gaussian_blur(sup, gaussian_power)
+    else:
+        blurred = pygame.transform.box_blur(sup, gaussian_power)
     blurred.blit(font.render(text, True, text_color), pos)
     final = surf.copy()
     final.blit(blurred, (0, 0))
     return final
+
+
+def generate_glowing_text(size, text, font, text_color, glowing_color, gaussian_power=10, center=None, topleft=None, mode=0):
+    sup = pygame.Surface(size, pygame.SRCALPHA)
+    image = font.render(text, True, glowing_color)
+    pos = (center[0]-image.get_width()/2, center[1]-image.get_height()/2) if center is not None else topleft
+    sup.blit(image, pos)
+    if mode == 0:
+        blurred = pygame.transform.gaussian_blur(sup, gaussian_power)
+    else:
+        blurred = pygame.transform.box_blur(sup, gaussian_power)
+    blurred.blit(font.render(text, True, text_color), pos)
+    return blurred
 
 
 # DEATH EFFECT ----------------------------------------------------------------
