@@ -5,53 +5,61 @@ from time import time, ctime
 import pygame
 pygame.init()
 
-from scripts.entities import Player, Asteroid
-from scripts.vfx import Fire, Line, Polygon, blit_glowing_text, generate_glowing_text
+from scripts.entities import Player, Asteroid, StellarCredit, load_images
+from scripts.vfx import Fire, Line, Polygon
 from scripts.utils import load_image_folder, blit_center, read_file, write_file, time_to_seconds
 import scripts.menu as menu
+from scripts.window import ShaderWindow
 
 
 
 class Game():
     def __init__(self):
         self.WIN_SIZE = [525, 650]
-        self.window = pygame.display.set_mode(self.WIN_SIZE)
-        pygame.display.set_caption('Asteroid Sprint')
+        self.window = ShaderWindow(self.WIN_SIZE, 'Asteroid Sprint', 'asset\\shaders\\')
+        self.display = pygame.Surface(self.WIN_SIZE)
         
         self.clock = pygame.time.Clock()
         self.dt = 0
         self.current_time = time()
+        self.start_time = time()
         
         self.keys = None
         self.events = []
         self.mouse_pos = (0, 0)
+        self.click = False
         
-        self.best_score = read_file('data\\data.txt')
+        self.load_data(read_file('data\\data.json'))
         self.setup_ui()
         self.menu = menu.Menu(self)
         self.menu_active = True
         self.setup_sound()
         self.asteroid_images = load_image_folder('asset\\asteroids\\')
+        load_images()
+        self.setup_shaders()
         
     def setup_ui(self):
         self.font = 'asset/orbitron-bold.otf'
         menu.fp = self.font
-        self.game_over_img = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
-        self.game_over_img = blit_glowing_text(
-            self.game_over_img, 'GAME OVER', pygame.font.Font(self.font, 63), 'white', 'red', center=(self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2 - 150))
-        self.game_over_img = blit_glowing_text(
-            self.game_over_img, 'Time :', pygame.font.Font(self.font, 46), 'white', 'red', center=(self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2 - 60))
+        self.ui_surf = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
         self.time_font = pygame.font.Font(self.font, 24)
         self.sound_on_img = pygame.image.load('asset\\sound_on.png').convert_alpha()
         self.sound_off_img = pygame.image.load('asset\\sound_off.png').convert_alpha()
         self.sound_img = self.sound_on_img
-        self.back_to_menu_button = menu.AnimatedButton((self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2 + 170), 'Back to Menu')
+    
+    def setup_shaders(self):
+        self.rage = False
+        self.window.load_const_surface('noise_tex', pygame.transform.scale(pygame.image.load('asset\\noise.png'), self.WIN_SIZE).convert())
+        self.window.load_const_var('w', 1.0/self.WIN_SIZE[0])
+        self.window.load_const_var('h', 1.0/self.WIN_SIZE[1])
+        self.stars_surf = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
         
     def setup_sound(self):
         pygame.mixer.music.load('asset\\Screen Saver.mp3')
-        pygame.mixer.music.play()
+        pygame.mixer.music.play(-1)
         self.sound = True
         self.sound_switch_timer = 0
+        self.sound_rect = self.sound_img.get_rect(center=(25, self.WIN_SIZE[1]-25))
     
     def switch_sound(self):
         self.sound = not self.sound
@@ -62,33 +70,55 @@ class Game():
             self.sound_img = self.sound_off_img
             pygame.mixer.music.pause()
         self.sound_switch_timer = 200
+    
+    def get_data(self):
+        return {
+            'time': self.best_score,
+            'currency': str(self.credits),
+            'magnet': str(self.magnet_power),
+            'games_nb': str(self.games_nb)}
+    
+    def load_data(self, data):
+        self.best_score = data['time']
+        self.credits = int(data['currency'])
+        self.magnet_power = int(data['magnet'])
+        self.games_nb = int(data['games_nb'])
         
     def quit(self):
-        write_file('data\\data.txt', self.best_score)
+        if not self.game_over and not self.menu_active:
+            self.quick_save()
+        write_file('data\\data.json', self.get_data())
         pygame.quit()
         exit()
         
     def get_events(self):
+        self.click = False
         self.keys = pygame.key.get_pressed()
         if self.keys[pygame.K_ESCAPE]:
             self.quit()
         self.events = pygame.event.get()
         for event in self.events:
-            if event.type == pygame.QUIT:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    self.click = True
+            elif event.type == pygame.QUIT:
                 self.quit()
         self.mouse_pos = pygame.mouse.get_pos()
     
-    def add_asteroid(self, pos, size, velocity, image, motion_x):
-        self.asteroids.append(Asteroid(pos, size, velocity, image, motion=[motion_x, 1]))
-    
     def add_particle(self):
         x = randint(0, self.WIN_SIZE[0])
-        radius = randint(1, 3)
+        radius = choice([1, 1, 1, 2, 2, 3])
         r = randint(180, 220)
         color = (r, r, randint(200, 255))
         p = [x, -10, radius, color]
         self.particles.append(p)
         return p
+    
+    def add_point(self):
+        x = randint(0, self.WIN_SIZE[0])
+        radius = choice([3, 3, 4])
+        vel = randint(-2, 3)
+        self.points.append(StellarCredit(x, -10, radius, vel, self))
     
     def spawn_asteroid(self):
         x = randint(0, self.WIN_SIZE[0])
@@ -96,7 +126,7 @@ class Game():
         radius = randint(40, 90)
         motion_x = uniform(0 if x < 75 else -0.2, 0 if x > self.WIN_SIZE[0]-75 else 0.2)
         image = choice(self.asteroid_images)
-        self.add_asteroid((x, -45), radius, velocity, image, motion_x)
+        self.asteroids.append(Asteroid((x, -45), radius, velocity, image, motion=[motion_x, 1]))
         
     def setup_stars(self):
         for i in range(50):
@@ -106,6 +136,7 @@ class Game():
     def start_game(self):
         self.menu_active = False
         self.game_start_time = time()
+        self.games_nb += 1
         pygame.mouse.set_visible(False)
         # clear asteroids to avoid player crashing when spawning
         if self.player.update(self.dt):
@@ -125,15 +156,21 @@ class Game():
             self.vfx_particles.append(Line(self.player.rect.center))
         for i in range(60):
             self.vfx_particles.append(Polygon(self.player.rect.center))
-        # ui things to display time under the game over text
-        self.game_over_time_img = generate_glowing_text(self.WIN_SIZE, str(self.current_time),
-            pygame.font.Font(self.font, 50), 'white', 'cyan', gaussian_power=6, center=(self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2))
         # check for best score
         if time_to_seconds(self.current_time) > time_to_seconds(self.best_score):
             self.best_score = self.current_time
-            self.game_over_time_img = blit_glowing_text(self.game_over_time_img, 'New Best Score !', pygame.font.Font(self.font, 30), 'white', 'lightgreen', 
-                                                        center=(self.WIN_SIZE[0]/2, self.WIN_SIZE[1]/2 + 60), gaussian_power=6, mode=1)
+            self.menu.gom.set_values(best_score=True)
             self.menu.set_best_score(self.current_time)
+        else:
+            self.menu.gom.set_values()
+        # increase credits
+        self.credits += self.current_credits
+        self.menu.set_credits(self.credits)
+    
+    def quick_save(self):
+        if time_to_seconds(self.current_time) > time_to_seconds(self.best_score):
+            self.best_score = self.current_time
+        self.credits += self.current_credits
     
     def reset(self):
         self.setup_game()
@@ -145,16 +182,18 @@ class Game():
         self.max_spawn_rate = 600
         self.timer = 0
         self.game_over = False
+        self.current_credits = 0
         
         self.screen_shake = False
         self.screen_shake_power = 0
         self.animation = False
         
         self.asteroids = []
+        self.points = []
         self.particles = []
         self.vfx_particles = []
         
-        self.player = Player(self.WIN_SIZE[0]//2, self.WIN_SIZE[1]-100, self)
+        self.player = Player(*self.mouse_pos, self)
         self.fire = Fire(self)
         self.setup_stars()
     
@@ -174,13 +213,19 @@ class Game():
                 print('-----')
             
             # reset window
-            self.window.fill((10,0,60))
+            self.display.fill((10,0,60))
             
-            # sound on/off
-            if self.sound_switch_timer > 0:
-                self.sound_switch_timer -= self.dt
-            if self.keys[pygame.K_m] and self.sound_switch_timer <= 0:
-                self.switch_sound()
+            # update level variables
+            if not self.game_over and not self.menu_active:
+                self.current_time = ctime(time()-self.game_start_time)[14:19]
+                # increase difficulty
+                self.speed += 0.06 * self.dt/100
+                if self.speed > 30:
+                    self.max_spawn_rate = 500
+                if self.speed > 50:
+                    self.max_spawn_rate = 350
+                if self.spawn_rate > self.max_spawn_rate:
+                    self.spawn_rate -= 5 * self.dt/100
             
             # dead animation calcul
             if self.animation:
@@ -198,28 +243,23 @@ class Game():
             else:
                 offset = 0
             
-            # update level variables
+            # update background stars
             if not self.game_over and not self.menu_active:
-                self.current_time = ctime(time()-self.game_start_time)[14:19]
-                # increase difficulty
-                self.speed += 0.06 * self.dt/100
-                if self.speed > 30:
-                    self.max_spawn_rate = 500
-                if self.speed > 50:
-                    self.max_spawn_rate = 350
-                if self.spawn_rate > self.max_spawn_rate:
-                    self.spawn_rate -= 5 * self.dt/100
-            
-            # render background stars
-            if not self.game_over and not self.menu_active:
+                # add new
                 if randint(0, 15) == 0:
                     self.add_particle()
+                # move it
+                for p in self.particles:
+                    if not self.game_over and not self.menu_active:
+                        p[1] += 0.5
+                        if p[1] > self.WIN_SIZE[1]:
+                           self.particles.remove(p)
+            
+            # render stars
+            self.stars_surf.fill((0, 0, 0, 0))
             for p in self.particles:
-                if not self.game_over and not self.menu_active:
-                    p[1] += 0.5
-                    if p[1] > self.WIN_SIZE[1]:
-                       self.particles.remove(p)
-                pygame.draw.circle(self.window, p[3], (p[0] + offset/2, p[1] + offset/2), p[2])
+                pygame.draw.circle(self.stars_surf, p[3], (p[0] + offset/2, p[1] + offset/2), p[2])
+            self.display.blit(self.stars_surf, (0, 0))
             
             # spawn new asteroids
             if not self.game_over:
@@ -230,52 +270,81 @@ class Game():
             
             # update and render asteroids
             for a in self.asteroids:
-                blit_center(self.window, pygame.transform.rotate(a.image, a.angle), (a.rect.centerx + offset, a.rect.centery + offset))
+                blit_center(self.display, pygame.transform.rotate(a.image, a.angle), (a.rect.centerx + offset, a.rect.centery + offset))
                 if not self.game_over:
                     a.update(self.speed, self.dt/100)
                     if a.rect.top > self.WIN_SIZE[1]+25:
                         self.asteroids.remove(a)
+            
+            # update and render points
+            if not self.game_over and not self.menu_active:
+                if randint(0, 100) == 0:
+                    self.add_point()
+                for p in self.points:
+                    if p.update():
+                        self.current_credits += p.radius - 2
+                    if not p.alive:
+                        self.points.remove(p)
+            for p in self.points:
+                p.render(self.display, offset)
             
             # update and render player
             if not self.menu_active:
                 if not self.game_over:
                     if self.player.update(self.dt/100):
                         self.end_game()
-                self.fire.update_render(self.window, self.dt)
-                blit_center(self.window, self.player.image, (self.player.rect.centerx + offset, self.player.rect.centery + offset))
+                self.fire.update_render(self.display, self.dt)
+                blit_center(self.display, self.player.image, (self.player.rect.centerx + offset, self.player.rect.centery + offset))
             
             # render dead animation
             if self.animation:
                 # circles around the collision
-                pygame.draw.circle(self.window, 'white', (self.player.rect.centerx+offset, self.player.rect.centery+offset), circle_radius, 5)
-                pygame.draw.circle(self.window, 'white', (self.player.rect.centerx+offset, self.player.rect.centery+offset), circle_radius/3, 3)
+                pygame.draw.circle(self.display, 'white', (self.player.rect.centerx+offset, self.player.rect.centery+offset), circle_radius, 5)
+                pygame.draw.circle(self.display, 'white', (self.player.rect.centerx+offset, self.player.rect.centery+offset), circle_radius/3, 3)
                 # destruction effect
                 for p in self.vfx_particles:
                     p.update(self.dt)
-                    p.render(self.window)
+                    p.render(self.display)
                     if not p.alive:
                         self.vfx_particles.remove(p)
             
+            # shader rage mode
+            if self.keys[pygame.K_r]:
+                self.rage = True
+            elif self.keys[pygame.K_t]:
+                self.rage = False
+            
+            # sound on/off
+            if self.sound_switch_timer > 0:
+                self.sound_switch_timer -= self.dt
+            if (self.keys[pygame.K_m] or (self.sound_rect.collidepoint(self.mouse_pos) and
+                self.click and self.menu_active)) and self.sound_switch_timer <= 0: self.switch_sound()
+            
             # render and update menu
+            self.ui_surf.fill((0, 0, 0, 0))
             if self.menu_active:
                 self.menu.update()
-                self.menu.render(self.window)
+                self.menu.render(self.ui_surf)
+                if self.sound_rect.collidepoint(self.mouse_pos):
+                    pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
             if self.game_over:
-                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-                if self.back_to_menu_button.update(self.dt):
-                    self.reset()
+                self.menu.gom.update()
             
             # indications
-            if not self.menu_active:
-                self.window.blit(self.time_font.render(str(self.current_time), True, 'cyan'), (8, 12))
-            blit_center(self.window, self.sound_img, (25, self.WIN_SIZE[1]-25))
+            if not self.menu_active and not self.game_over:
+                self.ui_surf.blit(self.time_font.render(str(self.current_time), True, 'cyan'), (8, 12))
+                st = self.time_font.render(str(self.current_credits)+' ST', True, 'yellow') # Stellar Credits
+                self.ui_surf.blit(st, (self.WIN_SIZE[0] - st.get_width() - 8, 12))
+            self.ui_surf.blit(self.sound_img, self.sound_rect)
             if self.game_over and not self.animation:
-                self.window.blit(self.game_over_img, (0, 0))
-                self.window.blit(self.game_over_time_img, (0, 0))
-                self.back_to_menu_button.render(self.window)
+                self.menu.gom.render(self.ui_surf)
             
-            pygame.display.flip()
-
+            self.display.blit(self.ui_surf, (0, 0))
+            
+            self.window.render(self.display, surfaces={
+                    'fire_tex': self.fire.get_surf(),
+                    'stars_tex': self.stars_surf},
+                time=time() % 10000)
 
 try:
     game = Game()

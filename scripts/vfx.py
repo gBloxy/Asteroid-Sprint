@@ -180,6 +180,9 @@ class Fire():
                                     pygame.SRCALPHA).convert_alpha()
         self.alive = True
     
+    def get_surf(self):
+        return self.bsurf
+    
     def update_render(self, surf, dt):
         self.x = self.g.player.rect.centerx
         self.y = self.g.player.rect.bottom
