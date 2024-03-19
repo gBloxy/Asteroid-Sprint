@@ -10,17 +10,22 @@ class ShaderWindow():
         self.window = pygame.display.set_mode(self.WIN_SIZE, pygame.OPENGL | pygame.DOUBLEBUF)
         pygame.display.set_caption(caption)
         self.ctx = moderngl.create_context()
-        self.quad_buffer = self.ctx.buffer(data=array('f', [
-            -1.0, 1.0, 0.0, 0.0,
-            1.0, 1.0, 1.0, 0.0,
-            -1.0, -1.0, 0.0, 1.0,
-            1.0, -1.0, 1.0, 1.0,                            ]))
+        self.vbo = self.ctx.buffer(data=array('f', [ # vertex buffer object
+            -1.0, 1.0, 0.0, 0.0,  # topleft
+            1.0, 1.0, 1.0, 0.0,   # topright
+            -1.0, -1.0, 0.0, 1.0, # bottomleft
+            1.0, -1.0, 1.0, 1.0,  # bottomright
+            ]))
         self.shader_path = shader_path
         vert_shader = self.load_shader_file('shader.vert')
         frag_shader = self.load_shader_file('shader.frag')
         self.program = self.ctx.program(vertex_shader=vert_shader, fragment_shader=frag_shader)
-        self.render_object = self.ctx.vertex_array(self.program, [(self.quad_buffer, '2f 2f', 'vert', 'texcoord')])
-        self.index = 1
+        self.vao = self.ctx.vertex_array(self.program, [(self.vbo, '2f 2f', 'vert', 'texcoord')]) # vertex array object
+        self.index = 0
+        self.time = 0
+    
+    def get_size(self):
+        return self.WIN_SIZE
     
     def get_index(self):
         i = self.index
@@ -32,41 +37,50 @@ class ShaderWindow():
             data = file.read()
         return data
     
-    def load_const_surface(self, name, surf):
-        tex = self.surf_to_texture(surf)
+    def load_const_surface(self, name, surf, comp=4):
+        tex = self.surf_to_texture(surf, comp=comp)
         index = self.get_index()
         tex.use(index)
-        self.program[name] = index
+        try:
+            self.program[name] = index
+        except Exception as const_error:
+            print(const_error)
     
     def load_const_var(self, name, const):
-        self.program[name] = const
+        try:
+            self.program[name] = const
+        except Exception as const_error:
+            print(const_error)
     
-    def surf_to_texture(self, surf):
-        tex = self.ctx.texture(surf.get_size(), 4)
+    def surf_to_texture(self, surf, comp=4):
+        tex = self.ctx.texture(surf.get_size(), comp)
         tex.filter = (moderngl.NEAREST, moderngl.NEAREST)
         tex.swizzle = 'BGRA'
         tex.write(surf.get_view('1'))
         return tex
     
-    def render(self, display, surfaces={}, **kwargs):
-        self.frame_tex = self.surf_to_texture(display)
-        self.frame_tex.use(0)
-        self.program['tex'] = 0
-        
+    def update(self, dt, **variables):
+        self.time += dt/1000
+        variables['time'] = self.time
+        for var in variables:
+            try:
+                self.program[var] = variables[var]
+            except Exception as uniform_error:
+                print(uniform_error)
+    
+    def render(self, **surfaces):
         index = self.index
         textures = []
+        
         for surf_name in surfaces:
-            surf = self.surf_to_texture(surfaces[surf_name])
-            surf.use(index)
+            tex = self.surf_to_texture(surfaces[surf_name])
+            tex.use(index)
             self.program[surf_name] = index
-            textures.append(surf)
+            textures.append(tex)
             index += 1
         
-        for var in kwargs:
-            self.program[var] = kwargs[var]
-        
-        self.render_object.render(mode=moderngl.TRIANGLE_STRIP)
+        self.vao.render(mode=moderngl.TRIANGLE_STRIP)
         pygame.display.flip()
         
-        for tex in textures + [self.frame_tex]:
+        for tex in textures:
             tex.release()

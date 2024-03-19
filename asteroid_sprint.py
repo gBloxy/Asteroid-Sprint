@@ -1,7 +1,7 @@
 
-from sys import exit
 from random import randint, uniform, choice
 from time import time, ctime
+from sys import exit
 import pygame
 pygame.init()
 
@@ -9,15 +9,18 @@ from scripts.entities import Player, Asteroid, StellarCredit, load_images
 from scripts.vfx import Fire, Line, Polygon
 from scripts.utils import load_image_folder, blit_center, read_file, write_file, time_to_seconds
 import scripts.menu as menu
+import scripts.gui as gui
 from scripts.window import ShaderWindow
 
+
+MAX_STELLAR_CREDITS = 5
 
 
 class Game():
     def __init__(self):
         self.WIN_SIZE = [525, 650]
         self.window = ShaderWindow(self.WIN_SIZE, 'Asteroid Sprint', 'asset\\shaders\\')
-        self.display = pygame.Surface(self.WIN_SIZE)
+        self.display = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
         
         self.clock = pygame.time.Clock()
         self.dt = 0
@@ -39,8 +42,10 @@ class Game():
         self.setup_shaders()
         
     def setup_ui(self):
-        self.font = 'asset/orbitron-bold.otf'
+        self.font = 'asset\\orbitron-bold.otf'
         menu.fp = self.font
+        gui.fp = self.font
+        
         self.ui_surf = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
         self.time_font = pygame.font.Font(self.font, 24)
         self.sound_on_img = pygame.image.load('asset\\sound_on.png').convert_alpha()
@@ -49,9 +54,11 @@ class Game():
     
     def setup_shaders(self):
         self.rage = False
-        self.window.load_const_surface('noise_tex', pygame.transform.scale(pygame.image.load('asset\\noise.png'), self.WIN_SIZE).convert())
+        self.window.load_const_surface('noise_tex', pygame.image.load('asset\\perlin_noise.png').convert())
+        self.window.load_const_var('res', self.WIN_SIZE)
         self.window.load_const_var('w', 1.0/self.WIN_SIZE[0])
         self.window.load_const_var('h', 1.0/self.WIN_SIZE[1])
+        self.window.load_const_var('max_st', MAX_STELLAR_CREDITS)
         self.stars_surf = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
         
     def setup_sound(self):
@@ -90,6 +97,11 @@ class Game():
         write_file('data\\data.json', self.get_data())
         pygame.quit()
         exit()
+    
+    def quick_save(self):
+        if time_to_seconds(self.current_time) > time_to_seconds(self.best_score):
+            self.best_score = self.current_time
+        self.credits += self.current_credits
         
     def get_events(self):
         self.click = False
@@ -119,6 +131,12 @@ class Game():
         radius = choice([3, 3, 4])
         vel = randint(-2, 3)
         self.points.append(StellarCredit(x, -10, radius, vel, self))
+    
+    def get_st_points(self):
+        sts = [(st.x, st.y, st.radius) for st in self.points]
+        if len(sts) < MAX_STELLAR_CREDITS:
+            sts += [(-1., -1., -1.) for i in range(MAX_STELLAR_CREDITS - len(sts))]
+        return sts
     
     def spawn_asteroid(self):
         x = randint(0, self.WIN_SIZE[0])
@@ -167,11 +185,6 @@ class Game():
         self.credits += self.current_credits
         self.menu.set_credits(self.credits)
     
-    def quick_save(self):
-        if time_to_seconds(self.current_time) > time_to_seconds(self.best_score):
-            self.best_score = self.current_time
-        self.credits += self.current_credits
-    
     def reset(self):
         self.setup_game()
         self.menu_active = True
@@ -213,7 +226,8 @@ class Game():
                 print('-----')
             
             # reset window
-            self.display.fill((10,0,60))
+            # self.display.fill((10, 0, 60))
+            self.display.fill((0, 0, 0, 0))
             
             # update level variables
             if not self.game_over and not self.menu_active:
@@ -278,15 +292,15 @@ class Game():
             
             # update and render points
             if not self.game_over and not self.menu_active:
-                if randint(0, 100) == 0:
+                if randint(0, 100) == 0 and len(self.points) < MAX_STELLAR_CREDITS:
                     self.add_point()
                 for p in self.points:
                     if p.update():
                         self.current_credits += p.radius - 2
                     if not p.alive:
                         self.points.remove(p)
-            for p in self.points:
-                p.render(self.display, offset)
+            # for p in self.points:
+            #     p.render(self.display, offset)
             
             # update and render player
             if not self.menu_active:
@@ -339,16 +353,20 @@ class Game():
             if self.game_over and not self.animation:
                 self.menu.gom.render(self.ui_surf)
             
-            self.display.blit(self.ui_surf, (0, 0))
+            # self.display.blit(self.ui_surf, (0, 0))
             
-            self.window.render(self.display, surfaces={
-                    'fire_tex': self.fire.get_surf(),
-                    'stars_tex': self.stars_surf},
-                time=time() % 10000)
+            self.window.update(self.dt, game_over=self.game_over, sts=self.get_st_points())
+            self.window.render(
+                tex       = self.display,
+                ui_surf   = self.ui_surf,
+                fire_tex  = self.fire.get_surf(),
+                stars_tex = self.stars_surf,
+                )
 
-try:
-    game = Game()
-    game.run()
-except Exception as crash:
-    pygame.quit()
-    raise crash
+if __name__ == '__main__':
+    try:
+        game = Game()
+        game.run()
+    except Exception as crash:
+        pygame.quit()
+        raise crash

@@ -2,129 +2,11 @@
 import pygame
 
 from scripts.vfx import blit_glowing_text, generate_glowing_text
-from scripts.utils import increase_rect, blit_center
+from scripts.utils import blit_center
+from scripts.gui import Button, AnimatedButton, ClickableText
 
 
-fp = 'asset/conthrax-sb.otf' # Font Path
-
-
-class Button():
-    def __init__(self, center, text, font_size=26, size=None, border=True, gaussian_power=5, align='center'):
-        self.image = pygame.Surface((400, 100), pygame.SRCALPHA)
-        self.image = blit_glowing_text(
-            self.image, text, pygame.font.Font(fp, font_size), 'white', 'cyan', gaussian_power, center=(self.image.get_width()/2, self.image.get_height()/2))
-        self.image_rect = self.image.get_rect(center=center)
-        self.text_size = list(pygame.font.Font(fp, font_size).render(text, True, 'white').get_size())
-        if size is None:
-            size = [self.text_size[0] + 40, self.text_size[1] + 16]
-        self.min_size = size[0]
-        self.max_size = size[0] + 25
-        self.rect = pygame.Rect(0, 0, *size)
-        self.rect.center = center
-        self.normal_rect = self.rect.copy()
-        self.border = border
-        self.hovered = False
-        self.clicked = False
-        self.border_width = 3
-        self.align = align
-        
-    def update_state(self):
-        self.clicked = False
-        if self.rect.collidepoint(pygame.mouse.get_pos()):
-            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
-            self.hovered = True
-            if pygame.mouse.get_pressed()[0]:
-                self.clicked = True
-        else:
-            self.hovered = False
-    
-    def stop_hovered(self):
-        self.hovered = False
-        self.border_width = 3
-        center = self.rect.center
-        self.rect = self.normal_rect.copy()
-        self.rect.center = center
-        
-    def update(self, dt):
-        self.update_state()
-        if self.hovered:
-            if self.rect.width < self.max_size:
-                increase_rect(self.rect, (2, 0))
-                self.border_width += 0.08
-            if self.clicked:
-                return True
-        else:
-            if self.rect.width > self.min_size:
-                increase_rect(self.rect, (-2, 0))
-                self.border_width -= 0.08
-        return False
-    
-    def render(self, surf):
-        if self.align == 'center':
-            blit_center(surf, self.image, self.rect.center)
-        elif self.align == 'right':
-            surf.blit(self.image, (self.rect.right - (self.image_rect.width - self.text_size[0])/2 - self.text_size[0] - 25, self.rect.centery - self.image_rect.height/2))
-        elif self.align == 'left':
-            surf.blit(self.image, (self.rect.left - self.image_rect.width/2 + self.text_size[0]/2 + 25, self.rect.centery - self.image_rect.height/2))
-        if self.border:
-            pygame.draw.rect(surf, 'lightblue', self.rect, round(self.border_width))
-
-
-class AnimatedButton(Button):
-    def __init__(self, center, text, size=None, font_size=26, align='center'):
-        super().__init__(center, text, font_size=font_size, size=size, align=align)
-        self.animation_timer = 450
-        self.animated = False
-        
-    def update(self, dt):
-        self.update_state()
-        if self.hovered:
-            if self.rect.width < self.max_size:
-                increase_rect(self.rect, (2, 0))
-                self.border_width += 0.08
-            if self.clicked and not self.animated:
-                self.animated = True
-        else:
-            if self.rect.width > self.min_size:
-                increase_rect(self.rect, (-2, 0))
-                self.border_width -= 0.08
-        if self.animated:
-            self.animation_timer -= dt
-            if self.animation_timer <= 0:
-                self.animation_timer = 450
-                self.animated = False
-                self.rect = self.normal_rect.copy()
-                self.border_width = 3
-                return True
-            center = self.rect.center
-            self.rect.width += 30
-            self.rect.height += 30
-            self.rect.center = center
-        return False
-
-
-class ClickableText(Button):
-    def __init__(self, center, text, mode='underlined'):
-        super().__init__(center, text, font_size=18, border=False, gaussian_power=5)
-        self.rect = pygame.Rect(0, 0, *self.text_size)
-        self.rect.center = center
-        self.mode = mode
-    
-    def update(self):
-        self.update_state()
-        if self.hovered and self.clicked:
-                return True
-        return False
-    
-    def render(self, surf):
-        if self.hovered:
-            if self.mode == 'underlined':
-                super().render(surf)
-                pygame.draw.rect(surf, 'lightblue', (self.rect.left, self.rect.bottom-3, self.rect.width, 2))
-            elif self.mode == 'zoomed':
-                blit_center(surf, pygame.transform.scale(self.image, (self.image.get_width()+15, self.image.get_height()+15)), self.image_rect.center)
-        else:
-            super().render(surf)
+fp = 'asset/orbitron-bold.otf' # Font Path
 
 
 class CreditPage():
@@ -277,29 +159,38 @@ class GameOverMenu():
     def __init__(self, game):
         self.g = game
         self.game_over_img = generate_glowing_text(
-            game.WIN_SIZE, 'GAME OVER', pygame.font.Font(fp, 63), 'white', 'red', center=(game.WIN_SIZE[0]/2, game.WIN_SIZE[1]/2 - 150))
+            game.WIN_SIZE, 'GAME OVER', pygame.font.Font(fp, 63), 'white', 'red', center=(game.WIN_SIZE[0]/2, game.WIN_SIZE[1]/2 - 200))
         self.game_over_img = blit_glowing_text(
-            self.game_over_img, 'Time :', pygame.font.Font(fp, 30), 'white', 'cyan', center=(110, game.WIN_SIZE[1]/2 - 60))
+            self.game_over_img, 'Time :', pygame.font.Font(fp, 30), 'white', 'cyan', center=(110, game.WIN_SIZE[1]/2 - 110))
         self.game_over_img = blit_glowing_text(
-            self.game_over_img, 'Stellar Credits :', pygame.font.Font(fp, 30), 'white', 'yellow', center=(game.WIN_SIZE[0]-160, game.WIN_SIZE[1]/2 - 60))
-        self.back_to_menu_button = AnimatedButton((game.WIN_SIZE[0]/2, game.WIN_SIZE[1]/2 + 170), 'Back to Menu')
+            self.game_over_img, 'Stellar Credits :', pygame.font.Font(fp, 30), 'white', 'yellow', center=(game.WIN_SIZE[0]-160, game.WIN_SIZE[1]/2 - 110))
+        self.retry_button = AnimatedButton((game.WIN_SIZE[0]/2, game.WIN_SIZE[1]/2 + 120), 'Retry')
+        self.back_to_menu_button = AnimatedButton((game.WIN_SIZE[0]/2, game.WIN_SIZE[1]/2 + 180), 'Menu')
+        self.quit_button = Button((game.WIN_SIZE[0]/2, game.WIN_SIZE[1]/2 + 240), 'Quit')
     
     def set_values(self, best_score=False):
         self.game_over_time_img = pygame.Surface(self.g.WIN_SIZE, pygame.SRCALPHA)
-        blit_center(self.game_over_time_img, pygame.font.Font(fp, 40).render(str(self.g.current_time), True, 'cyan'), (110, self.g.WIN_SIZE[1]/2))
-        blit_center(self.game_over_time_img, pygame.font.Font(fp, 40).render(str(self.g.current_credits), True, 'orange'), (self.g.WIN_SIZE[0]-160, self.g.WIN_SIZE[1]/2))
-        if best_score:
-            blit_center(self.game_over_time_img, pygame.font.Font(fp, 30).render('New Best Time !', True, 'yellow'), (self.g.WIN_SIZE[0]/2, self.g.WIN_SIZE[1]/2 + 70))
+        blit_center(self.game_over_time_img, pygame.font.Font(fp, 40).render(str(self.g.current_time), True, 'cyan'), (110, self.g.WIN_SIZE[1]/2 - 50))
+        blit_center(self.game_over_time_img, pygame.font.Font(fp, 40).render(str(self.g.current_credits), True, 'orange'), (self.g.WIN_SIZE[0]-160, self.g.WIN_SIZE[1]/2 - 50))
+        # if best_score:
+        blit_center(self.game_over_time_img, pygame.font.Font(fp, 30).render('New Best Time !', True, 'yellow'), (self.g.WIN_SIZE[0]/2, self.g.WIN_SIZE[1]/2 + 20))
     
     def update(self):
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
         if self.back_to_menu_button.update(self.g.dt):
             self.g.reset()
+        elif self.quit_button.update(self.g.dt):
+            self.g.quit()
+        elif self.retry_button.update(self.g.dt):
+            self.g.reset()
+            self.g.start_game()
     
     def render(self, surf):
         surf.blit(self.game_over_img, (0, 0))
         surf.blit(self.game_over_time_img, (0, 0))
         self.back_to_menu_button.render(surf)
+        self.quit_button.render(surf)
+        self.retry_button.render(surf)
 
 
 class Menu():
