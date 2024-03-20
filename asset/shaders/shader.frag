@@ -65,7 +65,7 @@ void main() {
     }
     
     vec4 fog_col = texture(noise_tex, fog_pos);
-    fog_col = vec4(fog_col.r * 1.5, fog_col.g, fog_col.b * 1.5, fog_col.a);
+    fog_col = vec4(fog_col.r * 1.15, fog_col.g, fog_col.b * 1.35, fog_col.a);
     
     render_color += fog_col * center_dist * 0.5;
     
@@ -89,7 +89,9 @@ void main() {
         vec2 radius_vec = vec2(sts[i].z) / res * 3.5;
         float radius = radius_vec.x;
 #if 1
-        if (dist < radius.x) {
+        render_color += vec4(1.0, 0.8431, 0., 1.) *  (1 / dist) * 0.02;
+#elif 0
+        if (dist < radius) {
             render_color += vec4(0.8, 0.67448, 0., 1.) *  (1 / dist) * 0.02; // vec4(1.0, 0.8431, 0., 1.)
         } else {
             render_color += vec4(0.8, 0.67448, 0., 1.) *  (1 / dist) * 0.007;
@@ -116,7 +118,7 @@ void main() {
     
     vec4 ui_col = texture(ui_surf, uv);
     if (ui_col.a > 0) {
-        render_color += mix(vec4(0.), ui_col, ui_col.a);
+        render_color = mix(render_color, ui_col, ui_col.a);
     }
     
     // final output

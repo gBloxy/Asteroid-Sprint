@@ -1,7 +1,7 @@
 
 import pygame
 
-from scripts.vfx import blit_glowing_text
+from scripts.vfx import blit_glowing_text, generate_glowing_text
 from scripts.utils import increase_rect, blit_center
 
 
@@ -104,8 +104,8 @@ class AnimatedButton(Button):
 
 
 class ClickableText(Button):
-    def __init__(self, center, text, mode='underlined'):
-        super().__init__(center, text, font_size=18, border=False, gaussian_power=5)
+    def __init__(self, center, text, mode='underlined', font_size=18):
+        super().__init__(center, text, font_size=font_size, border=False, gaussian_power=5)
         self.rect = pygame.Rect(0, 0, *self.text_size)
         self.rect.center = center
         self.mode = mode
@@ -125,3 +125,38 @@ class ClickableText(Button):
                 blit_center(surf, pygame.transform.scale(self.image, (self.image.get_width()+15, self.image.get_height()+15)), self.image_rect.center)
         else:
             super().render(surf)
+
+
+class SwitchButton():
+    def __init__(self, center, text, activated=True):
+        font = pygame.font.Font(fp, 18)
+        rendered_text = font.render(text, True, 'black')
+        size = rendered_text.get_size()
+        self.text_img = generate_glowing_text((size[0]+6, size[1]+6), text, font, 'white', 'cyan', center=(size[0]/2+3, size[1]/2+3), gaussian_power=3, mode=1)
+        self.img_rect = self.text_img.get_rect()
+        self.rect = pygame.Rect(0, 0, 50, 25)
+        self.state = activated
+        self.move(center)
+    
+    def move(self, center):
+        self.img_rect.midright = (center[0] - 5, center[1] + 2)
+        self.rect.midleft = (center[0] + 5, center[1])
+    
+    def toggle(self):
+        self.state = not self.state
+    
+    def update(self):
+        if self.rect.collidepoint(pygame.mouse.get_pos()):
+            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+            if pygame.mouse.get_pressed()[0]:
+                self.toggle()
+                return True
+        return None
+    
+    def render(self, surf):
+        surf.blit(self.text_img, self.img_rect)
+        if self.state:
+            pygame.draw.circle(surf, 'green', (self.rect.right - self.rect.width/3 + 4, self.rect.centery), self.rect.height/2-2)
+        else:
+            pygame.draw.circle(surf, 'red', (self.rect.left + self.rect.width/3 - 3, self.rect.centery), self.rect.height/2-2)
+        pygame.draw.rect(surf, 'lightblue', self.rect, 2, border_radius=75)

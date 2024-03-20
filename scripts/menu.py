@@ -1,10 +1,14 @@
 
+from webbrowser import open as open_url
 import pygame
 
 from scripts.vfx import blit_glowing_text, generate_glowing_text
 from scripts.utils import blit_center
-from scripts.gui import Button, AnimatedButton, ClickableText
+from scripts.gui import Button, AnimatedButton, ClickableText, SwitchButton
 
+
+ITCH_URL = 'https://g-bloxy.itch.io/asteroid-sprint'
+GITHUB_URL = 'https://github.com/gBloxy/Asteroid-Sprint'
 
 fp = 'asset/orbitron-bold.otf' # Font Path
 
@@ -15,25 +19,44 @@ class CreditPage():
         self.image, self.rect = self.create_credits_page(game)
         self.active = False
         self.close_button = ClickableText((self.rect.right - 27, self.rect.top + 27), 'X', mode='zoomed')
+        self.itch_link = ClickableText((self.rect.x + 115, self.rect.y + 279), '@g-bloxy', font_size=14)
+        self.github_link = ClickableText((self.rect.x + 115, self.rect.y + 305), '@gBloxy', font_size=14)
         self.pushing = False
         self.retracting = False
     
+    def add_line(self, text, image):
+        self.line_y += 20
+        return blit_glowing_text(image, text, self.font, 'white', 'cyan', 3, topleft=(self.line_x, self.line_y))
+    
+    def jump_line(self):
+        self.line_y += 18
+    
     def create_credits_page(self, game):
-        image = pygame.Surface((400, 230), pygame.SRCALPHA)
+        image = pygame.Surface((470, 350), pygame.SRCALPHA)
         pygame.draw.rect(image, 'cyan', (5, 5, image.get_width()-10, image.get_height()-10), 4)
         pygame.draw.rect(image, 'cyan', (10, 10, image.get_width()-20, image.get_height()-20), 4)
         image = pygame.transform.gaussian_blur(image, 4)
         pygame.draw.rect(image, 'white', (9, 9, image.get_width()-18, image.get_height()-18), 2)
-        font = pygame.font.Font(fp, 12)
-        image = blit_glowing_text(image, 'INFORMATION AND CREDITS', pygame.font.Font(fp, 17), 'white', 'cyan', 3, topleft=(20, 22))
-        image = blit_glowing_text(image, 'This game was created by g_Bloxy.', font, 'white', 'cyan', 3, topleft=(20, 54))
-        image = blit_glowing_text(image, 'The spaceship fire trail is a customized version', font, 'white', 'cyan', 3, topleft=(20, 81))
-        image = blit_glowing_text(image, 'of the fire vfx of @kadir014 on github.', font, 'white', 'cyan', 3, topleft=(20, 96))
-        image = blit_glowing_text(image, 'The death particles are a customized version', font, 'white', 'cyan', 3, topleft=(20, 123))
-        image = blit_glowing_text(image, 'of the vfx of @eliczi on github.', font, 'white', 'cyan', 3, topleft=(20, 138))
-        image = blit_glowing_text(image, 'github : @gBloxy.', font, 'white', 'cyan', 3, topleft=(20, 164))
-        image = blit_glowing_text(image, 'Font used : orbitron from the league of moveable type.', font, 'white', 'cyan', 3, topleft=(20, 180))
-        image = blit_glowing_text(image, 'Music used : screen saver from Kevin MacLeod.', font, 'white', 'cyan', 3, topleft=(20, 196))
+        
+        self.font = pygame.font.Font(fp, 14)
+        self.line_x, self.line_y = 24, 50
+        
+        image = blit_glowing_text(image, 'INFORMATION AND CREDITS', pygame.font.Font(fp, 20), 'white', 'cyan', 3, topleft=(24, 25))
+        image = self.add_line('This game was created by g_Bloxy.', image)
+        self.jump_line()
+        image = self.add_line('The spaceship fire trail is a customized version of', image)
+        image = self.add_line('the fire vfx of @kadir014 on github.', image)
+        self.line_y += 8
+        image = self.add_line('The death particles are a customized version of', image)
+        image = self.add_line('the vfx of @eliczi on github.', image)
+        self.jump_line()
+        image = self.add_line('Font used : orbitron from the league of moveable type.', image)
+        image = self.add_line('Music used : screen saver from Kevin MacLeod.', image)
+        self.jump_line()
+        image = self.add_line('itch.io :', image)
+        self.line_y += 6
+        image = self.add_line('github :', image)
+        
         rect = image.get_rect(center=(game.WIN_SIZE[0]/2, game.WIN_SIZE[1] + 200))
         return image, rect
     
@@ -43,6 +66,8 @@ class CreditPage():
             self.rect.y -= vel
             self.close_button.rect.y -= vel
             self.close_button.image_rect.y -= vel
+            self.itch_link.rect.y -= vel
+            self.github_link.rect.y -= vel
         else:
             self.pushing = False
             self.active = True
@@ -53,6 +78,8 @@ class CreditPage():
             self.rect.y += vel
             self.close_button.rect.y += vel
             self.close_button.image_rect.y += vel
+            self.itch_link.rect.y += vel
+            self.github_link.rect.y += vel
         else:
             self.retracting = False
     
@@ -68,10 +95,16 @@ class CreditPage():
             self.active = False
             self.retracting = True
             return True
+        elif self.itch_link.update():
+            open_url(ITCH_URL)
+        elif self.github_link.update():
+            open_url(GITHUB_URL)
         return False
     
     def render(self, surf):
         surf.blit(self.image, self.rect)
+        self.itch_link.render(surf)
+        self.github_link.render(surf)
         self.close_button.render(surf)
 
 
@@ -134,7 +167,7 @@ class MissionsPage(BasePage):
 
 class SuccesPage(BasePage):
     def __init__(self, game):
-        super().__init__('SUCCES', game)
+        super().__init__('Succes', game)
         self.best_score_font = pygame.font.Font(fp, 25)
     
     def set_best_score(self, score):
@@ -149,10 +182,28 @@ class SuccesPage(BasePage):
 class SettingsPage(BasePage):
     def __init__(self, game):
         super().__init__('Settings', game)
+        self.ui_timer = 0
+        self.sound = SwitchButton((150, 200), 'Sound')
         self.image = blit_glowing_text(
             self.image, 'sound on/off : press [m]', pygame.font.Font(fp, 18), 'white', 'cyan', 3, center=(game.WIN_SIZE[0]/2, 350))
         self.image = blit_glowing_text(
             self.image, 'press [ECHAP] to quit', pygame.font.Font(fp, 18), 'white', 'cyan', 3, center=(game.WIN_SIZE[0]/2, 400))
+    
+    def tg_sound(self):
+        self.sound.toggle()
+    
+    def update(self):
+        out = super().update()
+        if self.ui_timer > 0:
+            self.ui_timer -= self.g.dt
+        if self.ui_timer <= 0 and self.sound.update():
+            self.ui_timer = 300
+            self.g.switch_sound()
+        return out
+    
+    def render(self, surf):
+        super().render(surf)
+        self.sound.render(surf)
 
 
 class GameOverMenu():

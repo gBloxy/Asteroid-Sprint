@@ -45,12 +45,8 @@ class Game():
         self.font = 'asset\\orbitron-bold.otf'
         menu.fp = self.font
         gui.fp = self.font
-        
         self.ui_surf = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
         self.time_font = pygame.font.Font(self.font, 24)
-        self.sound_on_img = pygame.image.load('asset\\sound_on.png').convert_alpha()
-        self.sound_off_img = pygame.image.load('asset\\sound_off.png').convert_alpha()
-        self.sound_img = self.sound_on_img
     
     def setup_shaders(self):
         self.rage = False
@@ -66,16 +62,15 @@ class Game():
         pygame.mixer.music.play(-1)
         self.sound = True
         self.sound_switch_timer = 0
-        self.sound_rect = self.sound_img.get_rect(center=(25, self.WIN_SIZE[1]-25))
     
-    def switch_sound(self):
+    def switch_sound(self, by_key=False):
         self.sound = not self.sound
         if self.sound:
-            self.sound_img = self.sound_on_img
             pygame.mixer.music.unpause()
         else:
-            self.sound_img = self.sound_off_img
             pygame.mixer.music.pause()
+        if by_key:
+            self.menu.settings_page.tg_sound()
         self.sound_switch_timer = 200
     
     def get_data(self):
@@ -331,16 +326,14 @@ class Game():
             # sound on/off
             if self.sound_switch_timer > 0:
                 self.sound_switch_timer -= self.dt
-            if (self.keys[pygame.K_m] or (self.sound_rect.collidepoint(self.mouse_pos) and
-                self.click and self.menu_active)) and self.sound_switch_timer <= 0: self.switch_sound()
+            if self.keys[pygame.K_m] and self.sound_switch_timer <= 0:
+                self.switch_sound(by_key=True)
             
             # render and update menu
             self.ui_surf.fill((0, 0, 0, 0))
             if self.menu_active:
                 self.menu.update()
                 self.menu.render(self.ui_surf)
-                if self.sound_rect.collidepoint(self.mouse_pos):
-                    pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
             if self.game_over:
                 self.menu.gom.update()
             
@@ -349,7 +342,6 @@ class Game():
                 self.ui_surf.blit(self.time_font.render(str(self.current_time), True, 'cyan'), (8, 12))
                 st = self.time_font.render(str(self.current_credits)+' ST', True, 'yellow') # Stellar Credits
                 self.ui_surf.blit(st, (self.WIN_SIZE[0] - st.get_width() - 8, 12))
-            self.ui_surf.blit(self.sound_img, self.sound_rect)
             if self.game_over and not self.animation:
                 self.menu.gom.render(self.ui_surf)
             
