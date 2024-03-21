@@ -4,7 +4,7 @@ import pygame
 
 from scripts.vfx import blit_glowing_text, generate_glowing_text
 from scripts.utils import blit_center
-from scripts.gui import Button, AnimatedButton, ClickableText, SwitchButton
+from scripts.gui import Button, AnimatedButton, ClickableText, SwitchButton, Slider
 
 
 ITCH_URL = 'https://g-bloxy.itch.io/asteroid-sprint'
@@ -183,11 +183,16 @@ class SettingsPage(BasePage):
     def __init__(self, game):
         super().__init__('Settings', game)
         self.ui_timer = 0
-        self.sound = SwitchButton((150, 200), 'Sound')
+        self.sound = SwitchButton((120, 200), 'Sound')
+        self.sound_slider = Slider((310, 200), game, width=200, start_value=1.0, show_val=True)
+        self.sound_slider.set_callback(self.g.set_volume)
+        self.setup_indications()
+    
+    def setup_indications(self):
         self.image = blit_glowing_text(
-            self.image, 'sound on/off : press [m]', pygame.font.Font(fp, 18), 'white', 'cyan', 3, center=(game.WIN_SIZE[0]/2, 350))
+            self.image, 'sound on/off : press [m]', pygame.font.Font(fp, 18), 'white', 'cyan', 3, center=(self.g.WIN_SIZE[0]/2, 350))
         self.image = blit_glowing_text(
-            self.image, 'press [ECHAP] to quit', pygame.font.Font(fp, 18), 'white', 'cyan', 3, center=(game.WIN_SIZE[0]/2, 400))
+            self.image, 'press [ECHAP] to quit', pygame.font.Font(fp, 18), 'white', 'cyan', 3, center=(self.g.WIN_SIZE[0]/2, 400))
     
     def tg_sound(self):
         self.sound.toggle()
@@ -199,11 +204,13 @@ class SettingsPage(BasePage):
         if self.ui_timer <= 0 and self.sound.update():
             self.ui_timer = 300
             self.g.switch_sound()
+        self.sound_slider.update()
         return out
     
     def render(self, surf):
         super().render(surf)
         self.sound.render(surf)
+        self.sound_slider.render(surf)
 
 
 class GameOverMenu():
@@ -223,8 +230,8 @@ class GameOverMenu():
         self.game_over_time_img = pygame.Surface(self.g.WIN_SIZE, pygame.SRCALPHA)
         blit_center(self.game_over_time_img, pygame.font.Font(fp, 40).render(str(self.g.current_time), True, 'cyan'), (110, self.g.WIN_SIZE[1]/2 - 50))
         blit_center(self.game_over_time_img, pygame.font.Font(fp, 40).render(str(self.g.current_credits), True, 'orange'), (self.g.WIN_SIZE[0]-160, self.g.WIN_SIZE[1]/2 - 50))
-        # if best_score:
-        blit_center(self.game_over_time_img, pygame.font.Font(fp, 30).render('New Best Time !', True, 'yellow'), (self.g.WIN_SIZE[0]/2, self.g.WIN_SIZE[1]/2 + 20))
+        if best_score:
+            blit_center(self.game_over_time_img, pygame.font.Font(fp, 30).render('New Best Time !', True, 'yellow'), (self.g.WIN_SIZE[0]/2, self.g.WIN_SIZE[1]/2 + 20))
     
     def update(self):
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)

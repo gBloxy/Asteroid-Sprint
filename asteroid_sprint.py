@@ -73,6 +73,9 @@ class Game():
             self.menu.settings_page.tg_sound()
         self.sound_switch_timer = 200
     
+    def set_volume(self, volume):
+        pygame.mixer.music.set_volume(volume)
+    
     def get_data(self):
         return {
             'time': self.best_score,
@@ -347,6 +350,7 @@ class Game():
             
             # self.display.blit(self.ui_surf, (0, 0))
             
+            # final render
             self.window.update(self.dt, game_over=self.game_over, sts=self.get_st_points())
             self.window.render(
                 tex       = self.display,
@@ -354,6 +358,7 @@ class Game():
                 fire_tex  = self.fire.get_surf(),
                 stars_tex = self.stars_surf,
                 )
+
 
 if __name__ == '__main__':
     try:

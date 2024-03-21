@@ -160,3 +160,57 @@ class SwitchButton():
         else:
             pygame.draw.circle(surf, 'red', (self.rect.left + self.rect.width/3 - 3, self.rect.centery), self.rect.height/2-2)
         pygame.draw.rect(surf, 'lightblue', self.rect, 2, border_radius=75)
+
+
+class Slider():
+    def __init__(self, center, game, width=150, start_value=0.5, show_val=False):
+        self.g = game
+        self.center = center
+        self.value = start_value
+        self.width = width
+        self.callback = None
+        
+        self.bar_rect = pygame.Rect(center[0] - width / 2, center[1] - 13, width, 26)
+        
+        self.bar_img = pygame.Surface((width + 11, 20), pygame.SRCALPHA)
+        pygame.draw.rect(self.bar_img, 'cyan', (3, 6, width+6, 6), border_radius=10)
+        pygame.draw.rect(self.bar_img, 'cyan', (3, 9, width+6, 6), border_radius=10)
+        self.bar_img = pygame.transform.box_blur(self.bar_img, 5)
+        pygame.draw.rect(self.bar_img, 'white', (6, 8, width, 5), border_radius=10)
+        
+        self.cursor_rect = pygame.Rect(self.bar_rect.x + width * start_value - 4, center[1] - 13, 8, 26)
+        
+        self.font = pygame.font.Font(fp, 16)
+        
+        if show_val:
+            self.text_img = self.new_text_image()
+            self.text_co = (self.center[0] + width / 2 + 40, self.center[1] + 1)
+        else:
+            self.text_img = None
+        
+    def new_text_image(self):
+        return self.font.render(str(round(self.value*100))+'%', True, 'lightblue')
+    
+    def set_value(self, value):
+        self.value = value
+        self.cursor_rect.x = self.bar_rect.x + self.width * self.value
+        self.text_img = self.new_text_image()
+    
+    def set_callback(self, func):
+        self.callback = func
+    
+    def update(self):
+        if pygame.mouse.get_pressed()[0] and self.bar_rect.collidepoint(self.g.mouse_pos):
+            old = self.value
+            new = (self.g.mouse_pos[0] - self.bar_rect.x) / self.width
+            if old != new:
+                self.set_value(new)
+                if self.callback is not None:
+                    self.callback(self.value)
+    
+    def render(self, surf: pygame.Surface):
+        blit_center(surf, self.bar_img, self.center)
+        pygame.draw.rect(surf, 'lightblue', self.cursor_rect, border_radius=5)
+        if self.text_img is not None:
+            blit_center(surf, self.text_img, self.text_co)
+        surf.set_at(self.center, 'black')
