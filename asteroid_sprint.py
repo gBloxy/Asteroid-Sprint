@@ -5,15 +5,11 @@ from sys import exit
 import pygame
 pygame.init()
 
+from scripts.window import ShaderWindow
 from scripts.entities import Player, Asteroid, StellarCredit, load_images
 from scripts.vfx import Fire, Line, Polygon
-from scripts.utils import load_image_folder, blit_center, read_file, write_file, time_to_seconds
 import scripts.menu as menu
-import scripts.gui as gui
-from scripts.window import ShaderWindow
-
-
-MAX_STELLAR_CREDITS = 5
+import scripts.core as c
 
 
 class Game():
@@ -32,19 +28,18 @@ class Game():
         self.mouse_pos = (0, 0)
         self.click = False
         
-        self.load_data(read_file('data\\data.json'))
+        self.load_data(c.read_file('data\\data.json'))
         self.setup_ui()
         self.menu = menu.Menu(self)
         self.menu_active = True
         self.setup_sound()
-        self.asteroid_images = load_image_folder('asset\\asteroids\\')
+        self.asteroid_images = c.load_image_folder('asset\\asteroids\\')
         load_images()
         self.setup_shaders()
         
     def setup_ui(self):
         self.font = 'asset\\orbitron-bold.otf'
-        menu.fp = self.font
-        gui.fp = self.font
+        c.fp = self.font
         self.ui_surf = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
         self.time_font = pygame.font.Font(self.font, 24)
     
@@ -54,7 +49,7 @@ class Game():
         self.window.load_const_var('res', self.WIN_SIZE)
         self.window.load_const_var('w', 1.0/self.WIN_SIZE[0])
         self.window.load_const_var('h', 1.0/self.WIN_SIZE[1])
-        self.window.load_const_var('max_st', MAX_STELLAR_CREDITS)
+        self.window.load_const_var('max_st', c.MAX_STELLAR_CREDITS)
         self.stars_surf = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
         
     def setup_sound(self):
@@ -92,17 +87,18 @@ class Game():
     def quit(self):
         if not self.game_over and not self.menu_active:
             self.quick_save()
-        write_file('data\\data.json', self.get_data())
+        c.write_file('data\\data.json', self.get_data())
         pygame.quit()
         exit()
     
     def quick_save(self):
-        if time_to_seconds(self.current_time) > time_to_seconds(self.best_score):
+        if c.time_to_seconds(self.current_time) > c.time_to_seconds(self.best_score):
             self.best_score = self.current_time
         self.credits += self.current_credits
         
     def get_events(self):
         self.click = False
+        c.CLICK = False
         self.keys = pygame.key.get_pressed()
         if self.keys[pygame.K_ESCAPE]:
             self.quit()
@@ -111,9 +107,11 @@ class Game():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     self.click = True
+                    c.CLICK = True
             elif event.type == pygame.QUIT:
                 self.quit()
         self.mouse_pos = pygame.mouse.get_pos()
+        c.MOUSE_POS = self.mouse_pos
     
     def add_particle(self):
         x = randint(0, self.WIN_SIZE[0])
@@ -132,8 +130,8 @@ class Game():
     
     def get_st_points(self):
         sts = [(st.x, st.y, st.radius) for st in self.points]
-        if len(sts) < MAX_STELLAR_CREDITS:
-            sts += [(-1., -1., -1.) for i in range(MAX_STELLAR_CREDITS - len(sts))]
+        if len(sts) < c.MAX_STELLAR_CREDITS:
+            sts += [(-1., -1., -1.) for i in range(c.MAX_STELLAR_CREDITS - len(sts))]
         return sts
     
     def spawn_asteroid(self):
@@ -173,7 +171,7 @@ class Game():
         for i in range(60):
             self.vfx_particles.append(Polygon(self.player.rect.center))
         # check for best score
-        if time_to_seconds(self.current_time) > time_to_seconds(self.best_score):
+        if c.time_to_seconds(self.current_time) > c.time_to_seconds(self.best_score):
             self.best_score = self.current_time
             self.menu.gom.set_values(best_score=True)
             self.menu.set_best_score(self.current_time)
@@ -282,7 +280,7 @@ class Game():
             
             # update and render asteroids
             for a in self.asteroids:
-                blit_center(self.display, pygame.transform.rotate(a.image, a.angle), (a.rect.centerx + offset, a.rect.centery + offset))
+                c.blit_center(self.display, pygame.transform.rotate(a.image, a.angle), (a.rect.centerx + offset, a.rect.centery + offset))
                 if not self.game_over:
                     a.update(self.speed, self.dt/100)
                     if a.rect.top > self.WIN_SIZE[1]+25:
@@ -290,7 +288,7 @@ class Game():
             
             # update and render points
             if not self.game_over and not self.menu_active:
-                if randint(0, 100) == 0 and len(self.points) < MAX_STELLAR_CREDITS:
+                if randint(0, 100) == 0 and len(self.points) < c.MAX_STELLAR_CREDITS:
                     self.add_point()
                 for p in self.points:
                     if p.update():
@@ -306,7 +304,7 @@ class Game():
                     if self.player.update(self.dt/100):
                         self.end_game()
                 self.fire.update_render(self.display, self.dt)
-                blit_center(self.display, self.player.image, (self.player.rect.centerx + offset, self.player.rect.centery + offset))
+                c.blit_center(self.display, self.player.image, (self.player.rect.centerx + offset, self.player.rect.centery + offset))
             
             # render dead animation
             if self.animation:

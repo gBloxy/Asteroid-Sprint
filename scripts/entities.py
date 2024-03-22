@@ -1,12 +1,11 @@
 
 import pygame
-from math import sqrt, cos, sin, atan2
+from math import sqrt, cos, sin, atan2, dist
 from random import uniform
 from time import time
 from os import listdir
 
-from scripts.utils import distance, blit_center
-
+from scripts.core import blit_center
 
 
 def collide_circle(rect, circle):
@@ -23,7 +22,7 @@ def collide_circle(rect, circle):
     elif circle.centery > rect.y + rect.height:
         testY = rect.y + rect.height
 
-    d = distance((testX, testY), circle.center)
+    d = dist((testX, testY), circle.center)
     return d <= circle.width/2
 
 
@@ -37,11 +36,6 @@ def collide(player, a):
 
 def load_images():
     global glow_img, light_img, spaceship_idle, spaceship_right, spaceship_left
-    # spaceship_image = pygame.image.load('asset\\ship0.png')
-    # spaceship_image.set_colorkey('black')
-    # spaceship_crashed_image = pygame.image.load('asset\\spaceship_crashed.png')
-    # spaceship_crashed_image.set_colorkey('black')
-
     glow_img = pygame.Surface((255, 255))
     glow_img.fill((240 * 0.7, 215 * 0.7, 0))
     light_img = pygame.image.load('asset\\light.png')
