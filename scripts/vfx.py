@@ -4,6 +4,8 @@ from math import cos, sin, radians
 import pygame
 from pygame.math import Vector2
 
+import scripts.core as c
+
 
 # FIRE COLORS -----------------------------------------------------------------
 
@@ -175,9 +177,8 @@ class Fire():
         self.particles = list()
         self.dead = list()
         self.j = 0
-        self.x, self.y = game.mouse_pos
-        self.bsurf = pygame.Surface((game.WIN_SIZE[0]//self.res,game.WIN_SIZE[1]//self.res),
-                                    pygame.SRCALPHA).convert_alpha()
+        self.x, self.y = c.MOUSE_POS
+        self.bsurf = pygame.Surface((c.WIN_SIZE[0]//self.res, c.WIN_SIZE[1]//self.res), pygame.SRCALPHA).convert_alpha()
         self.alive = True
     
     def get_surf(self):

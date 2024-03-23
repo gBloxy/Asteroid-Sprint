@@ -14,9 +14,8 @@ import scripts.core as c
 
 class Game():
     def __init__(self):
-        self.WIN_SIZE = [525, 650]
-        self.window = ShaderWindow(self.WIN_SIZE, 'Asteroid Sprint', 'asset\\shaders\\')
-        self.display = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
+        self.window = ShaderWindow(c.WIN_SIZE, 'Asteroid Sprint', 'asset\\shaders\\')
+        self.display = pygame.Surface(c.WIN_SIZE, pygame.SRCALPHA)
         
         self.clock = pygame.time.Clock()
         self.dt = 0
@@ -25,8 +24,6 @@ class Game():
         
         self.keys = None
         self.events = []
-        self.mouse_pos = (0, 0)
-        self.click = False
         
         self.load_data(c.read_file('data\\data.json'))
         self.setup_ui()
@@ -40,37 +37,24 @@ class Game():
     def setup_ui(self):
         self.font = 'asset\\orbitron-bold.otf'
         c.fp = self.font
-        self.ui_surf = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
+        self.ui_surf = pygame.Surface(c.WIN_SIZE, pygame.SRCALPHA)
         self.time_font = pygame.font.Font(self.font, 24)
     
-    def setup_shaders(self):
-        self.rage = False
-        self.window.load_const_surface('noise_tex', pygame.image.load('asset\\perlin_noise.png').convert())
-        self.window.load_const_var('res', self.WIN_SIZE)
-        self.window.load_const_var('w', 1.0/self.WIN_SIZE[0])
-        self.window.load_const_var('h', 1.0/self.WIN_SIZE[1])
-        self.window.load_const_var('max_st', c.MAX_STELLAR_CREDITS)
-        self.stars_surf = pygame.Surface(self.WIN_SIZE, pygame.SRCALPHA)
-        
     def setup_sound(self):
         pygame.mixer.music.load('asset\\Screen Saver.mp3')
         pygame.mixer.music.play(-1)
         self.sound = True
         self.sound_switch_timer = 0
     
-    def switch_sound(self, by_key=False):
-        self.sound = not self.sound
-        if self.sound:
-            pygame.mixer.music.unpause()
-        else:
-            pygame.mixer.music.pause()
-        if by_key:
-            self.menu.settings_page.tg_sound()
-        self.sound_switch_timer = 200
-    
-    def set_volume(self, volume):
-        pygame.mixer.music.set_volume(volume)
-    
+    def setup_shaders(self):
+        self.rage = False
+        self.window.load_const_surface('noise_tex', pygame.image.load('asset\\perlin_noise.png').convert())
+        self.window.load_const_var('res', c.WIN_SIZE)
+        self.window.load_const_var('w', 1.0/c.WIN_SIZE[0])
+        self.window.load_const_var('h', 1.0/c.WIN_SIZE[1])
+        self.window.load_const_var('max_st', c.MAX_STELLAR_CREDITS)
+        self.stars_surf = pygame.Surface(c.WIN_SIZE, pygame.SRCALPHA)
+        
     def get_data(self):
         return {
             'time': self.best_score,
@@ -95,9 +79,21 @@ class Game():
         if c.time_to_seconds(self.current_time) > c.time_to_seconds(self.best_score):
             self.best_score = self.current_time
         self.credits += self.current_credits
+    
+    def switch_sound(self, by_key=False):
+        self.sound = not self.sound
+        if self.sound:
+            pygame.mixer.music.unpause()
+        else:
+            pygame.mixer.music.pause()
+        if by_key:
+            self.menu.settings_page.tg_sound()
+        self.sound_switch_timer = 200
+    
+    def set_volume(self, volume):
+        pygame.mixer.music.set_volume(volume)
         
     def get_events(self):
-        self.click = False
         c.CLICK = False
         self.keys = pygame.key.get_pressed()
         if self.keys[pygame.K_ESCAPE]:
@@ -106,15 +102,21 @@ class Game():
         for event in self.events:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
-                    self.click = True
                     c.CLICK = True
             elif event.type == pygame.QUIT:
                 self.quit()
-        self.mouse_pos = pygame.mouse.get_pos()
-        c.MOUSE_POS = self.mouse_pos
+        c.MOUSE_POS = pygame.mouse.get_pos()
     
-    def add_particle(self):
-        x = randint(0, self.WIN_SIZE[0])
+    def spawn_asteroid(self):
+        x = randint(0, c.WIN_SIZE[0])
+        velocity = uniform(-4, 7)
+        radius = randint(40, 90)
+        motion_x = uniform(0 if x < 75 else -0.2, 0 if x > c.WIN_SIZE[0]-75 else 0.2)
+        image = choice(self.asteroid_images)
+        self.asteroids.append(Asteroid((x, -50), radius, velocity, image, motion=[motion_x, 1]))
+    
+    def add_bkg_star(self):
+        x = randint(0, c.WIN_SIZE[0])
         radius = choice([1, 1, 1, 2, 2, 3])
         r = randint(180, 220)
         color = (r, r, randint(200, 255))
@@ -122,8 +124,13 @@ class Game():
         self.particles.append(p)
         return p
     
-    def add_point(self):
-        x = randint(0, self.WIN_SIZE[0])
+    def setup_stars(self):
+        for i in range(50):
+            p = self.add_bkg_star()
+            self.particles[self.particles.index(p)][1] = randint(0, c.WIN_SIZE[1])
+    
+    def add_st(self):
+        x = randint(0, c.WIN_SIZE[0])
         radius = choice([3, 3, 4])
         vel = randint(-2, 3)
         self.points.append(StellarCredit(x, -10, radius, vel, self))
@@ -133,19 +140,6 @@ class Game():
         if len(sts) < c.MAX_STELLAR_CREDITS:
             sts += [(-1., -1., -1.) for i in range(c.MAX_STELLAR_CREDITS - len(sts))]
         return sts
-    
-    def spawn_asteroid(self):
-        x = randint(0, self.WIN_SIZE[0])
-        velocity = uniform(-4, 7)
-        radius = randint(40, 90)
-        motion_x = uniform(0 if x < 75 else -0.2, 0 if x > self.WIN_SIZE[0]-75 else 0.2)
-        image = choice(self.asteroid_images)
-        self.asteroids.append(Asteroid((x, -45), radius, velocity, image, motion=[motion_x, 1]))
-        
-    def setup_stars(self):
-        for i in range(50):
-            p = self.add_particle()
-            self.particles[self.particles.index(p)][1] = randint(0, self.WIN_SIZE[1])
     
     def start_game(self):
         self.menu_active = False
@@ -202,7 +196,7 @@ class Game():
         self.particles = []
         self.vfx_particles = []
         
-        self.player = Player(*self.mouse_pos, self)
+        self.player = Player(*c.MOUSE_POS, self)
         self.fire = Fire(self)
         self.setup_stars()
     
@@ -257,12 +251,12 @@ class Game():
             if not self.game_over and not self.menu_active:
                 # add new
                 if randint(0, 15) == 0:
-                    self.add_particle()
+                    self.add_bkg_star()
                 # move it
                 for p in self.particles:
                     if not self.game_over and not self.menu_active:
                         p[1] += 0.5
-                        if p[1] > self.WIN_SIZE[1]:
+                        if p[1] > c.WIN_SIZE[1]:
                            self.particles.remove(p)
             
             # render stars
@@ -283,13 +277,13 @@ class Game():
                 c.blit_center(self.display, pygame.transform.rotate(a.image, a.angle), (a.rect.centerx + offset, a.rect.centery + offset))
                 if not self.game_over:
                     a.update(self.speed, self.dt/100)
-                    if a.rect.top > self.WIN_SIZE[1]+25:
+                    if a.rect.top > c.WIN_SIZE[1]+25:
                         self.asteroids.remove(a)
             
             # update and render points
             if not self.game_over and not self.menu_active:
                 if randint(0, 100) == 0 and len(self.points) < c.MAX_STELLAR_CREDITS:
-                    self.add_point()
+                    self.add_st()
                 for p in self.points:
                     if p.update():
                         self.current_credits += p.radius - 2
@@ -342,7 +336,7 @@ class Game():
             if not self.menu_active and not self.game_over:
                 self.ui_surf.blit(self.time_font.render(str(self.current_time), True, 'cyan'), (8, 12))
                 st = self.time_font.render(str(self.current_credits)+' ST', True, 'yellow') # Stellar Credits
-                self.ui_surf.blit(st, (self.WIN_SIZE[0] - st.get_width() - 8, 12))
+                self.ui_surf.blit(st, (c.WIN_SIZE[0] - st.get_width() - 8, 12))
             if self.game_over and not self.animation:
                 self.menu.gom.render(self.ui_surf)
             

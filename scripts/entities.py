@@ -5,7 +5,7 @@ from random import uniform
 from time import time
 from os import listdir
 
-from scripts.core import blit_center
+import scripts.core as c
 
 
 def collide_circle(rect, circle):
@@ -66,7 +66,7 @@ class Player():
         self.image = spaceship_idle
         
     def update(self, dt):
-        pos = self.g.mouse_pos
+        pos = c.MOUSE_POS
         inclination = (pos[0] - self.rect.centerx) / 2.5
         
         if inclination < 0:
@@ -132,12 +132,12 @@ class StellarCredit():
                 return True
         else:
             self.y += default_speed
-            if self.y > self.g.WIN_SIZE[1] + 10:
+            if self.y > c.WIN_SIZE[1] + 10:
                 self.alive = False
         return False
     
     def render(self, surf, offset):
         diameter = sin(self.radius * 2 + time()) * 10 + 50
         image = pygame.transform.scale(glow_img, (diameter, diameter))
-        blit_center(surf, image, (self.x + offset/2, self.y + offset/2), special_flags=pygame.BLEND_RGBA_ADD)
+        c.blit_center(surf, image, (self.x + offset/2, self.y + offset/2), special_flags=pygame.BLEND_RGBA_ADD)
         pygame.draw.circle(surf, 'white', (self.x + offset/2, self.y + offset/2), self.radius)

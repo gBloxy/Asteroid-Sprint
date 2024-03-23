@@ -4,6 +4,7 @@ from json import dump, load
 import pygame
 
 
+WIN_SIZE = [525, 650]
 MAX_STELLAR_CREDITS = 5
 
 CLICK = False

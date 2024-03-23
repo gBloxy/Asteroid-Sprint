@@ -4,13 +4,12 @@ import pygame
 
 import scripts.core as c
 from scripts.vfx import blit_glowing_text, generate_glowing_text
-from scripts.gui import Button, AnimatedButton, ClickableText, SwitchButton, Slider
+from scripts.gui import Button, AnimatedButton, ClickableText, SwitchButton, Slider, UILine
 
 
 class CreditPage():
-    def __init__(self, game):
-        self.g = game
-        self.image, self.rect = self.create_credits_page(game)
+    def __init__(self):
+        self.image, self.rect = self.create_credits_page()
         self.active = False
         self.close_button = ClickableText((self.rect.right - 27, self.rect.top + 27), 'X', mode='zoomed')
         self.itch_link = ClickableText((self.rect.x + 115, self.rect.y + 279), '@g-bloxy', font_size=14)
@@ -25,7 +24,7 @@ class CreditPage():
     def jump_line(self):
         self.line_y += 18
     
-    def create_credits_page(self, game):
+    def create_credits_page(self):
         image = pygame.Surface((470, 350), pygame.SRCALPHA)
         pygame.draw.rect(image, 'cyan', (5, 5, image.get_width()-10, image.get_height()-10), 4)
         pygame.draw.rect(image, 'cyan', (10, 10, image.get_width()-20, image.get_height()-20), 4)
@@ -51,12 +50,12 @@ class CreditPage():
         self.line_y += 6
         image = self.add_line('github :', image)
         
-        rect = image.get_rect(center=(game.WIN_SIZE[0]/2, game.WIN_SIZE[1] + 200))
+        rect = image.get_rect(center=(c.WIN_SIZE[0]/2, c.WIN_SIZE[1] + 200))
         return image, rect
     
     def process_pushing(self):
         vel = 30
-        if self.rect.centery != self.g.WIN_SIZE[1]/2 + 75:
+        if self.rect.centery != c.WIN_SIZE[1]/2 + 75:
             self.rect.y -= vel
             self.close_button.rect.y -= vel
             self.close_button.image_rect.y -= vel
@@ -68,7 +67,7 @@ class CreditPage():
     
     def process_retracting(self):
         vel = 30
-        if self.rect.centery != self.g.WIN_SIZE[1] + 200:
+        if self.rect.centery != c.WIN_SIZE[1] + 200:
             self.rect.y += vel
             self.close_button.rect.y += vel
             self.close_button.image_rect.y += vel
@@ -105,8 +104,8 @@ class CreditPage():
 class BasePage():
     def __init__(self, title, game):
         self.g = game
-        self.image = generate_glowing_text(game.WIN_SIZE, title, pygame.font.Font(c.fp, 50), 'white', 'cyan', center=(game.WIN_SIZE[0]/2, 90))
-        self.previous = Button((-100, game.WIN_SIZE[1]-75), 'Previous', align='right')
+        self.image = generate_glowing_text(c.WIN_SIZE, title, pygame.font.Font(c.fp, 50), 'white', 'cyan', center=(c.WIN_SIZE[0]/2, 90))
+        self.previous = Button((-100, c.WIN_SIZE[1]-75), 'Previous', align='right')
         self.active = False
         self.pushing = False
         self.retracting = False
@@ -163,14 +162,16 @@ class SuccesPage(BasePage):
     def __init__(self, game):
         super().__init__('Succes', game)
         self.best_score_font = pygame.font.Font(c.fp, 25)
+        self.l = UILine(400, 'title test', 'this is a longer description line')
     
     def set_best_score(self, score):
         self.best_score_img = generate_glowing_text(
-            self.g.WIN_SIZE, 'best score : '+score, self.best_score_font, 'white', 'cyan', 4, center=(self.g.WIN_SIZE[0]/2, 200), mode=1)
+            c.WIN_SIZE, 'best score : '+score, self.best_score_font, 'white', 'cyan', 4, center=(c.WIN_SIZE[0]/2, 200), mode=1)
     
     def render(self, surf):
         super().render(surf)
         surf.blit(self.best_score_img, (0, 0))
+        self.l.render(surf)
 
 
 class SettingsPage(BasePage):
@@ -183,9 +184,9 @@ class SettingsPage(BasePage):
     
     def setup_indications(self):
         self.image = blit_glowing_text(
-            self.image, 'sound on/off : press [m]', pygame.font.Font(c.fp, 18), 'white', 'cyan', 3, center=(self.g.WIN_SIZE[0]/2, 350))
+            self.image, 'sound on/off : press [m]', pygame.font.Font(c.fp, 18), 'white', 'cyan', 3, center=(c.WIN_SIZE[0]/2, 350))
         self.image = blit_glowing_text(
-            self.image, 'press [ECHAP] to quit', pygame.font.Font(c.fp, 18), 'white', 'cyan', 3, center=(self.g.WIN_SIZE[0]/2, 400))
+            self.image, 'press [ECHAP] to quit', pygame.font.Font(c.fp, 18), 'white', 'cyan', 3, center=(c.WIN_SIZE[0]/2, 400))
     
     def tg_sound(self):
         self.sound.toggle()
@@ -207,21 +208,21 @@ class GameOverMenu():
     def __init__(self, game):
         self.g = game
         self.game_over_img = generate_glowing_text(
-            game.WIN_SIZE, 'GAME OVER', pygame.font.Font(c.fp, 63), 'white', 'red', center=(game.WIN_SIZE[0]/2, game.WIN_SIZE[1]/2 - 200))
+            c.WIN_SIZE, 'GAME OVER', pygame.font.Font(c.fp, 63), 'white', 'red', center=(c.WIN_SIZE[0]/2, c.WIN_SIZE[1]/2 - 200))
         self.game_over_img = blit_glowing_text(
-            self.game_over_img, 'Time :', pygame.font.Font(c.fp, 30), 'white', 'cyan', center=(110, game.WIN_SIZE[1]/2 - 110))
+            self.game_over_img, 'Time :', pygame.font.Font(c.fp, 30), 'white', 'cyan', center=(110, c.WIN_SIZE[1]/2 - 110))
         self.game_over_img = blit_glowing_text(
-            self.game_over_img, 'Stellar Credits :', pygame.font.Font(c.fp, 30), 'white', 'yellow', center=(game.WIN_SIZE[0]-160, game.WIN_SIZE[1]/2 - 110))
-        self.retry_button = AnimatedButton((game.WIN_SIZE[0]/2, game.WIN_SIZE[1]/2 + 120), 'Retry')
-        self.back_to_menu_button = AnimatedButton((game.WIN_SIZE[0]/2, game.WIN_SIZE[1]/2 + 180), 'Menu')
-        self.quit_button = Button((game.WIN_SIZE[0]/2, game.WIN_SIZE[1]/2 + 240), 'Quit')
+            self.game_over_img, 'Stellar Credits :', pygame.font.Font(c.fp, 30), 'white', 'yellow', center=(c.WIN_SIZE[0]-160, c.WIN_SIZE[1]/2 - 110))
+        self.retry_button = AnimatedButton((c.WIN_SIZE[0]/2, c.WIN_SIZE[1]/2 + 120), 'Retry')
+        self.back_to_menu_button = AnimatedButton((c.WIN_SIZE[0]/2, c.WIN_SIZE[1]/2 + 180), 'Menu')
+        self.quit_button = Button((c.WIN_SIZE[0]/2, c.WIN_SIZE[1]/2 + 240), 'Quit')
     
     def set_values(self, best_score=False):
-        self.game_over_time_img = pygame.Surface(self.g.WIN_SIZE, pygame.SRCALPHA)
-        c.blit_center(self.game_over_time_img, pygame.font.Font(c.fp, 40).render(str(self.g.current_time), True, 'cyan'), (110, self.g.WIN_SIZE[1]/2 - 50))
-        c.blit_center(self.game_over_time_img, pygame.font.Font(c.fp, 40).render(str(self.g.current_credits), True, 'orange'), (self.g.WIN_SIZE[0]-160, self.g.WIN_SIZE[1]/2 - 50))
+        self.game_over_time_img = pygame.Surface(c.WIN_SIZE, pygame.SRCALPHA)
+        c.blit_center(self.game_over_time_img, pygame.font.Font(c.fp, 40).render(str(self.g.current_time), True, 'cyan'), (110, c.WIN_SIZE[1]/2 - 50))
+        c.blit_center(self.game_over_time_img, pygame.font.Font(c.fp, 40).render(str(self.g.current_credits), True, 'orange'), (c.WIN_SIZE[0]-160, c.WIN_SIZE[1]/2 - 50))
         if best_score:
-            c.blit_center(self.game_over_time_img, pygame.font.Font(c.fp, 30).render('New Best Time !', True, 'yellow'), (self.g.WIN_SIZE[0]/2, self.g.WIN_SIZE[1]/2 + 20))
+            c.blit_center(self.game_over_time_img, pygame.font.Font(c.fp, 30).render('New Best Time !', True, 'yellow'), (c.WIN_SIZE[0]/2, c.WIN_SIZE[1]/2 + 20))
     
     def update(self):
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
@@ -251,28 +252,28 @@ class Menu():
         self.mission_page = MissionsPage(game)
         self.succes_page = SuccesPage(game)
         self.settings_page = SettingsPage(game)
-        self.credit_page = CreditPage(game)
+        self.credit_page = CreditPage()
         self.set_best_score(game.best_score)
         self.set_credits(game.credits)
         self.gom = GameOverMenu(game)
         
     def create_main_image(self, game):
-        image = pygame.Surface(game.WIN_SIZE, pygame.SRCALPHA)
-        image = blit_glowing_text(image, 'ASTEROID', pygame.font.Font(c.fp, 63), 'white', 'cyan', center=(game.WIN_SIZE[0]/2, 90))
-        image = blit_glowing_text(image, 'SPRINT', pygame.font.Font(c.fp, 63), 'white', 'cyan', center=(game.WIN_SIZE[0]/2, 160))
+        image = pygame.Surface(c.WIN_SIZE, pygame.SRCALPHA)
+        image = blit_glowing_text(image, 'ASTEROID', pygame.font.Font(c.fp, 63), 'white', 'cyan', center=(c.WIN_SIZE[0]/2, 90))
+        image = blit_glowing_text(image, 'SPRINT', pygame.font.Font(c.fp, 63), 'white', 'cyan', center=(c.WIN_SIZE[0]/2, 160))
         return image
     
     def setup_buttons(self, game):
-        self.play_button = AnimatedButton((game.WIN_SIZE[0]/2, game.WIN_SIZE[1]/2 - 50), 'Play', [180, 70], font_size=45)
+        self.play_button = AnimatedButton((c.WIN_SIZE[0]/2, c.WIN_SIZE[1]/2 - 50), 'Play', [180, 70], font_size=45)
         
         size = [200, 55]
-        self.spaceship_button = Button((85, game.WIN_SIZE[1]/2 + 55), 'Spaceship', size=size, align='right')
-        self.mission_button = Button((62, game.WIN_SIZE[1]/2 + 135), 'Missions', size=size, align='right')
-        self.succes_button = Button((75, game.WIN_SIZE[1]/2 + 215), 'Succes', size=size, align='right')
+        self.spaceship_button = Button((85, c.WIN_SIZE[1]/2 + 55), 'Spaceship', size=size, align='right')
+        self.mission_button = Button((62, c.WIN_SIZE[1]/2 + 135), 'Missions', size=size, align='right')
+        self.succes_button = Button((75, c.WIN_SIZE[1]/2 + 215), 'Succes', size=size, align='right')
         
-        self.settings_button = Button((game.WIN_SIZE[0] - 85, game.WIN_SIZE[1]/2 + 55), 'Settings', size=size, align='left')
-        self.credits_button = Button((game.WIN_SIZE[0] - 62, game.WIN_SIZE[1]/2 + 135), 'Credits', size=size, align='left')
-        self.quit_button = Button((game.WIN_SIZE[0] - 75, game.WIN_SIZE[1]/2 + 215), 'Quit', size=size, align='left')
+        self.settings_button = Button((c.WIN_SIZE[0] - 85, c.WIN_SIZE[1]/2 + 55), 'Settings', size=size, align='left')
+        self.credits_button = Button((c.WIN_SIZE[0] - 62, c.WIN_SIZE[1]/2 + 135), 'Credits', size=size, align='left')
+        self.quit_button = Button((c.WIN_SIZE[0] - 75, c.WIN_SIZE[1]/2 + 215), 'Quit', size=size, align='left')
         
         self.setup_buttons_variables()
     

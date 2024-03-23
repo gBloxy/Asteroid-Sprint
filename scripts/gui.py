@@ -209,3 +209,49 @@ class Slider():
         pygame.draw.rect(surf, 'lightblue', self.cursor_rect, border_radius=5)
         if self.text_img is not None:
             c.blit_center(surf, self.text_img, self.text_co)
+
+
+class UILine():
+    def __init__(self, y, title, message, icon=None, progress_bar=False):
+        self.title = title
+        self.msg = message
+        
+        self.rect = pygame.Rect(50, y, c.WIN_SIZE[0] - 100, 70)
+        self.surface = pygame.Surface(self.rect.size, pygame.SRCALPHA)
+        
+        pygame.draw.rect(self.surface, (50., 50., 50., 120), (0, 0, *self.rect.size), border_radius=10)
+        pygame.draw.rect(self.surface, 'lightblue', (0, 0, *self.rect.size), width=3, border_radius=10)
+        
+        self.surface.blit(pygame.font.Font(c.fp, 17).render(title,   True, 'white'),     (70, 10 if progress_bar else 15))
+        self.surface.blit(pygame.font.Font(c.fp, 13).render(message, True, 'lightgray'), (70, 30 if progress_bar else 40))
+        
+        self.icon = icon if icon is not None else pygame.Surface((56, 56))
+        self.surface.blit(self.icon, (8, 7))
+        
+        if progress_bar:
+            self.have_progress_bar = True
+            self.font = pygame.font.Font(c.fp, 12)
+            self.value = 0.0
+            self.value_img = self.new_value_img()
+        else:
+            self.have_progress_bar = False
+        
+        self.ui_x = self.rect.x + 70
+    
+    def scroll(self, y):
+        self.rect.y += y
+    
+    def set_value(self, value):
+        self.value = value
+        self.value_img = self.new_value_img()
+    
+    def new_value_img(self):
+        return self.font.render(str(round(self.value*100))+'%', True, 'lightblue')
+    
+    def render(self, surf):
+        surf.blit(self.surface, self.rect)
+        if self.have_progress_bar:
+            if self.value:
+                pygame.draw.rect(surf, 'gold3', (self.ui_x + 2, self.rect.y + 49, self.value * (self.rect.width - 150) - 4, 11), border_radius=5)
+            pygame.draw.rect(surf, 'black', (self.ui_x, self.rect.y + 48, self.rect.width - 150, 13), width=2, border_radius=5)
+            c.blit_center(surf, self.value_img, (self.rect.right - 50, self.rect.y + 55))
