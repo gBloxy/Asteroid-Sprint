@@ -24,6 +24,14 @@ class Button():
         self.clicked = False
         self.border_width = 3
         self.align = align
+        self.callback = None
+    
+    def set_callback(self, func):
+        self.callback = func
+    
+    def click(self):
+        if self.callback is not None:
+            self.callback()
         
     def update_state(self):
         self.clicked = False
@@ -41,7 +49,7 @@ class Button():
         center = self.rect.center
         self.rect = self.normal_rect.copy()
         self.rect.center = center
-        
+    
     def update(self, dt):
         self.update_state()
         if self.hovered:
@@ -49,6 +57,7 @@ class Button():
                 c.increase_rect(self.rect, (2, 0))
                 self.border_width += 0.08
             if self.clicked:
+                self.click()
                 return True
         else:
             if self.rect.width > self.min_size:
@@ -92,6 +101,7 @@ class AnimatedButton(Button):
                 self.animated = False
                 self.rect = self.normal_rect.copy()
                 self.border_width = 3
+                self.click()
                 return True
             center = self.rect.center
             self.rect.width += 30
@@ -107,10 +117,11 @@ class ClickableText(Button):
         self.rect.center = center
         self.mode = mode
     
-    def update(self):
+    def update(self, dt=None):
         self.update_state()
         if self.hovered and self.clicked:
-                return True
+            self.click()
+            return True
         return False
     
     def render(self, surf):
@@ -133,20 +144,29 @@ class SwitchButton():
         self.img_rect = self.text_img.get_rect()
         self.rect = pygame.Rect(0, 0, 50, 25)
         self.state = activated
+        self.callback = None
         self.move(center)
     
     def move(self, center):
         self.img_rect.midright = (center[0] - 5, center[1] + 2)
         self.rect.midleft = (center[0] + 5, center[1])
     
+    def set_callback(self, func):
+        self.callback = func
+    
+    def _toggle(self):
+        self.state = not self.state
+        if self.callback is not None:
+            self.callback()
+    
     def toggle(self):
         self.state = not self.state
     
-    def update(self):
+    def update(self, dt=None):
         if self.rect.collidepoint(c.MOUSE_POS):
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
             if c.CLICK:
-                self.toggle()
+                self._toggle()
                 return True
         return None
     
@@ -195,7 +215,7 @@ class Slider():
     def set_callback(self, func):
         self.callback = func
     
-    def update(self):
+    def update(self, dt=None):
         if pygame.mouse.get_pressed()[0] and self.bar_rect.collidepoint(c.MOUSE_POS):
             old = self.value
             new = (c.MOUSE_POS[0] - self.bar_rect.x) / self.width
@@ -204,7 +224,7 @@ class Slider():
                 if self.callback is not None:
                     self.callback(self.value)
     
-    def render(self, surf: pygame.Surface):
+    def render(self, surf):
         c.blit_center(surf, self.bar_img, self.center)
         pygame.draw.rect(surf, 'lightblue', self.cursor_rect, border_radius=5)
         if self.text_img is not None:
