@@ -79,16 +79,49 @@ class SuccesPage(BasePage):
     def __init__(self, game):
         super().__init__('Succes', game)
         self.best_score_font = pygame.font.Font(c.fp, 25)
-        self.l = UILine(400, 'title test', 'this is a longer description line')
+        self.line_y = 150
+        self.add_succes('Fly me to the moon', 'crash into the moon', 'fly-me-to-the-moon.png')
+        self.add_succes('Moron', 'crash into the first asteroid to spawn', 'moron.png')
+        self.add_succes('Scrooge', 'Survive one minute without messing a credit', 'scrooge.png')
+        self.add_succes('Sugar Rush', 'survive 30 seconds whitout remaining still', 'sugar-rush.png')
+        self.add_succes('Germophobic', 'survive 1 minute without touching anything', 'germophobic.png')
+        self.add_succes('Rookie Driver', 'survive 30 seconds', 'rookie.png')
+        self.add_succes('Confirmed Pilot', 'survive 1 minute', 'confirmed.png')
+        self.add_succes('Expert Flyer', 'survive 2 minutes', 'expert.png')
+        self.add_succes('Renowned Captain', 'survive 3 minutes', 'captain.png')
+        self.add_succes('Beginner', 'play 50 times', 'beginner.png')
+        self.add_succes('Peak Humor', 'play 69 times', 'peak-humor.png')
+        self.add_succes('Curious', 'play 100 times', 'curious.png')
+        self.add_succes('Explorer', 'play 200 times', 'explorer.png')
+        self.add_succes('Peak Humor II', 'play 420 times', 'peak-humorII.png')
+        self.add_succes('Adventurer', 'play 500 times', 'adventurer.png')
+        self.add_succes('Master', 'play 1000 times', 'master.png')
+        #self.add_succes('Capitalism', 'buy all itmes on the shop', 'capitalism.png')
+    
+    def add_succes(self, title, descr, icon):
+        self.line_y += 85
+        l = UILine(self.line_y, title, descr, pygame.image.load('icons//'+icon))
+        self.add_widget(l)
     
     def set_best_score(self, score):
         self.best_score_img = generate_glowing_text(
             c.WIN_SIZE, 'best score : '+score, self.best_score_font, 'white', 'cyan', 4, center=(c.WIN_SIZE[0]/2, 200), mode=1)
     
+    def update(self):
+        out = super().update()
+        if self.g.keys[pygame.K_UP]:
+            for i in self.ui_elements:
+                if i != self.previous:
+                    i.scroll(10)
+        if self.g.keys[pygame.K_DOWN]:
+            for i in self.ui_elements:
+                if i != self.previous:
+                    i.scroll(-10)
+        return out
+    
     def render(self, surf):
         super().render(surf)
         surf.blit(self.best_score_img, (0, 0))
-        self.l.render(surf)
 
 
 class SettingsPage(BasePage):

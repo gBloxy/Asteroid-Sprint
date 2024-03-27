@@ -268,6 +268,9 @@ class UILine():
     def new_value_img(self):
         return self.font.render(str(round(self.value*100))+'%', True, 'lightblue')
     
+    def update(self, dt=None):
+        pass
+    
     def render(self, surf):
         surf.blit(self.surface, self.rect)
         if self.have_progress_bar:
