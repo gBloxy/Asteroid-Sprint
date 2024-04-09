@@ -42,22 +42,16 @@ def load_images():
     light_img.set_colorkey((0, 0, 0))
     glow_img.blit(light_img, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
     
-    spaceship_idle = pygame.image.load('asset\\spaceship\\idle.png')
-    spaceship_idle.convert_alpha()
-    
-    spaceship_right = [pygame.image.load('asset\\spaceship\\right\\'+name) for name in listdir('asset\\spaceship\\right\\')]
-    for s in spaceship_right:
-        s.convert_alpha()
-    spaceship_left = [pygame.image.load('asset\\spaceship\\left\\'+name) for name in listdir('asset\\spaceship\\left\\')]
-    for s in spaceship_left:
-        s.convert_alpha()
+    spaceship_idle = pygame.image.load('asset\\spaceship\\idle.png').convert_alpha()
+    spaceship_right = [pygame.image.load('asset\\spaceship\\right\\'+name).convert_alpha() for name in listdir('asset\\spaceship\\right\\')]
+    spaceship_left = [pygame.image.load('asset\\spaceship\\left\\'+name).convert_alpha() for name in listdir('asset\\spaceship\\left\\')]
 
 
 class Player():
-    def __init__(self, x, y, game):
+    def __init__(self, game):
         self.g = game
         self.rect = pygame.FRect(0, 0, 52, 50)
-        self.rect.center = (x, y)
+        self.rect.center = c.MOUSE_POS
         self.velocity = 15 # To implement later
         self.image = spaceship_idle
         self.mask = pygame.mask.from_surface(self.image)
