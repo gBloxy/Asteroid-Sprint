@@ -8,6 +8,7 @@ pygame.init()
 from scripts.window import ShaderWindow
 from scripts.entities import Player, Asteroid, StellarCredit, load_images
 from scripts.vfx import Fire, Line, Polygon
+from scripts.gamedata import GameDataManager
 import scripts.menu as menu
 import scripts.core as c
 
@@ -23,13 +24,13 @@ class Game():
         self.start_time = time()
         
         self.keys = None
-        self.events = []
         
-        self.load_data(c.read_file('data\\data.json'))
+        self.gd = GameDataManager()
+        self.load_data()
+        self.setup_sound()
         self.setup_ui()
         self.menu = menu.Menu(self)
         self.menu_active = True
-        self.setup_sound()
         self.asteroid_images = c.load_image_folder('asset\\asteroids\\')
         load_images()
         self.setup_shaders()
@@ -47,7 +48,6 @@ class Game():
         self.sound_switch_timer = 0
     
     def setup_shaders(self):
-        self.rage = False
         self.window.load_const_surface('noise_tex', pygame.image.load('asset\\perlin_noise.png').convert())
         self.window.load_const_var('res', c.WIN_SIZE)
         self.window.load_const_var('w', 1.0/c.WIN_SIZE[0])
@@ -55,30 +55,20 @@ class Game():
         self.window.load_const_var('max_st', c.MAX_STELLAR_CREDITS)
         self.stars_surf = pygame.Surface(c.WIN_SIZE, pygame.SRCALPHA)
         
-    def get_data(self):
-        return {
-            'time': self.best_score,
-            'currency': str(self.credits),
-            'magnet': str(self.magnet_power),
-            'games_nb': str(self.games_nb)}
-    
-    def load_data(self, data):
-        self.best_score = data['time']
-        self.credits = int(data['currency'])
-        self.magnet_power = int(data['magnet'])
-        self.games_nb = int(data['games_nb'])
+    def load_data(self):
+        self.credits = self.gd.credits
+        self.magnet_power = self.gd.magnet_power
         
     def quit(self):
         if not self.game_over and not self.menu_active:
             self.quick_save()
-        c.write_file('data\\data.json', self.get_data())
+        self.gd.save_data()
         pygame.quit()
         exit()
     
     def quick_save(self):
-        if c.time_to_seconds(self.current_time) > c.time_to_seconds(self.best_score):
-            self.best_score = self.current_time
-        self.credits += self.current_credits
+        self.gd.check_high_score(self.current_time)
+        self.gd.set_credits(self.current_credits)
     
     def switch_sound(self, by_key=False):
         self.sound = not self.sound
@@ -92,14 +82,13 @@ class Game():
     
     def set_volume(self, volume):
         pygame.mixer.music.set_volume(volume)
-        
+    
     def get_events(self):
         c.CLICK = False
         self.keys = pygame.key.get_pressed()
         if self.keys[pygame.K_ESCAPE]:
             self.quit()
-        self.events = pygame.event.get()
-        for event in self.events:
+        for event in pygame.event.get():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     c.CLICK = True
@@ -144,7 +133,7 @@ class Game():
     def start_game(self):
         self.menu_active = False
         self.game_start_time = time()
-        self.games_nb += 1
+        self.gd.incr_game_nb()
         pygame.mouse.set_visible(False)
         # clear asteroids to avoid player crashing when spawning
         if self.player.update(self.dt):
@@ -165,14 +154,14 @@ class Game():
         for i in range(60):
             self.vfx_particles.append(Polygon(self.player.rect.center))
         # check for best score
-        if c.time_to_seconds(self.current_time) > c.time_to_seconds(self.best_score):
-            self.best_score = self.current_time
-            self.menu.gom.set_values(best_score=True)
-            self.menu.set_best_score(self.current_time)
+        if self.gd.check_high_score(self.current_time):
+            self.menu.gom.set_values(high_score=True)
+            self.menu.set_high_score(self.current_time)
         else:
             self.menu.gom.set_values()
         # increase credits
         self.credits += self.current_credits
+        self.gd.set_credits(self.current_credits)
         self.menu.set_credits(self.credits)
     
     def reset(self):
@@ -196,7 +185,7 @@ class Game():
         self.particles = []
         self.vfx_particles = []
         
-        self.player = Player(*c.MOUSE_POS, self)
+        self.player = Player(self)
         self.fire = Fire(self)
         self.setup_stars()
     
@@ -311,12 +300,6 @@ class Game():
                     p.render(self.display)
                     if not p.alive:
                         self.vfx_particles.remove(p)
-            
-            # shader rage mode
-            if self.keys[pygame.K_r]:
-                self.rage = True
-            elif self.keys[pygame.K_t]:
-                self.rage = False
             
             # sound on/off
             if self.sound_switch_timer > 0:

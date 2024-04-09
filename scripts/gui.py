@@ -231,7 +231,7 @@ class Slider():
             c.blit_center(surf, self.text_img, self.text_co)
 
 
-class UILine():
+class MissionLine():
     def __init__(self, y, title, message, icon=None, progress_bar=False):
         self.title = title
         self.msg = message
@@ -268,6 +268,9 @@ class UILine():
     def new_value_img(self):
         return self.font.render(str(round(self.value*100))+'%', True, 'lightblue')
     
+    def update(self, dt=None):
+        pass
+    
     def render(self, surf):
         surf.blit(self.surface, self.rect)
         if self.have_progress_bar:
@@ -275,3 +278,60 @@ class UILine():
                 pygame.draw.rect(surf, 'gold3', (self.ui_x + 2, self.rect.y + 49, self.value * (self.rect.width - 150) - 4, 11), border_radius=5)
             pygame.draw.rect(surf, 'black', (self.ui_x, self.rect.y + 48, self.rect.width - 150, 13), width=2, border_radius=5)
             c.blit_center(surf, self.value_img, (self.rect.right - 50, self.rect.y + 55))
+
+
+class SuccessLine():
+    def __init__(self, x, y, width, success):
+        self.success = success
+        self.rect = pygame.Rect(x, y, width, 70)
+        self.icon_pos = (self.rect.x + 8, self.rect.y + 7)
+        
+        font = pygame.font.Font(c.fp, 13)
+        text = font.render(success.description, True, 'lightgray')
+        
+        if text.get_width() > width - 75:
+            line_wrapped = True
+            self.rect.h += 17
+        else:
+            line_wrapped = False
+        
+        self.surface = pygame.Surface(self.rect.size, pygame.SRCALPHA)
+        pygame.draw.rect(self.surface, (50., 50., 50., 120), (0, 0, *self.rect.size), border_radius=10)
+        pygame.draw.rect(self.surface, 'lightblue', (0, 0, *self.rect.size), width=3, border_radius=10)
+        
+        self.surface.blit(pygame.font.Font(c.fp, 17).render(success.title, True, 'white'), (70, 15))
+        if line_wrapped:
+            c.line_wrapp(self.surface, success.description, 'lightgray', pygame.Rect(70, 40, width - 75, 50), font)
+        else:
+            self.surface.blit(text, (70, 40))
+        
+    def update(self, dt=None):
+        pass
+    
+    def render(self, surf):
+        surf.blit(self.surface, self.rect)
+        surf.blit(self.success.icon, self.icon_pos)
+
+
+class SuccessIcon():
+    def __init__(self, x, y, success, parent):
+        self.parent = parent
+        self.success = success
+        self.rect = pygame.Rect(x, y, 70, 70)
+        self.bkg = pygame.Surface(self.rect.size, pygame.SRCALPHA)
+        pygame.draw.rect(self.bkg, (50, 50, 50, 120), (0, 0, *self.rect.size), border_radius=10)
+    
+    def update(self, dt=None):
+        if self.rect.collidepoint(c.MOUSE_POS):
+            if self.rect.height < 77:
+                c.increase_rect(self.rect, (1, 1))
+            if c.CLICK:
+                if self.success.unlocked or not self.success.hidden:
+                    self.parent.select(self.success)
+        elif self.rect.height > 70:
+            c.increase_rect(self.rect, (-1, -1))
+    
+    def render(self, surf):
+        surf.blit(self.bkg, self.rect)
+        pygame.draw.rect(surf, 'lightblue', self.rect, width=3, border_radius=10)
+        c.blit_center(surf, self.success.icon, self.rect.center)

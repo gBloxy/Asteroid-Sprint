@@ -4,7 +4,7 @@ import pygame
 
 import scripts.core as c
 from scripts.vfx import blit_glowing_text, generate_glowing_text
-from scripts.gui import Button, AnimatedButton, ClickableText, SwitchButton, Slider, UILine
+from scripts.gui import Button, AnimatedButton, ClickableText, SwitchButton, Slider, SuccessIcon, SuccessLine
 
 
 class BasePage():
@@ -16,11 +16,14 @@ class BasePage():
         self.pushing = False
         self.retracting = False
         self.previous = Button((-100, c.WIN_SIZE[1]-75), 'Previous', align='right')
-        self.previous.set_callback(self._slot_previous)
+        self.previous.set_callback(self.close)
         self.add_widget(self.previous)
     
     def add_widget(self, widget):
         self.ui_elements.append(widget)
+    
+    def remove_widget(self, widget):
+        self.ui_elements.remove(widget)
     
     def process_pushing(self):
         if self.previous.rect.centerx != 80:
@@ -35,7 +38,7 @@ class BasePage():
             self.retracting = False
             self.active = False
     
-    def _slot_previous(self):
+    def close(self):
         if not self.g.menu.retracting_buttons:
             self.retracting = True
     
@@ -75,20 +78,42 @@ class MissionsPage(BasePage):
         super().__init__('Missions', game)
 
 
-class SuccesPage(BasePage):
+class SuccessPage(BasePage):
     def __init__(self, game):
         super().__init__('Succes', game)
-        self.best_score_font = pygame.font.Font(c.fp, 25)
-        self.l = UILine(400, 'title test', 'this is a longer description line')
+        self.high_score_font = pygame.font.Font(c.fp, 25)
+        self.selected = None
+        
+        x, y = 50, 195
+        for s in game.gd.success_mgr.success_order:
+            self.add_widget(SuccessIcon(x, y, game.gd.get_success(s), self))
+            x += 85
+            if x > 450:
+                x = 50
+                y += 85
     
-    def set_best_score(self, score):
-        self.best_score_img = generate_glowing_text(
-            c.WIN_SIZE, 'best score : '+score, self.best_score_font, 'white', 'cyan', 4, center=(c.WIN_SIZE[0]/2, 200), mode=1)
+    def select(self, success):
+        if self.selected is not None:
+            if success == self.selected.success:
+                return
+            self.ui_elements.remove(self.selected)
+        if success is not None:
+            self.selected = SuccessLine(185, 538, 325, success)
+            self.add_widget(self.selected)
+        else:
+            self.selected = None
+    
+    def set_high_score(self, score):
+        self.high_score_img = generate_glowing_text(
+            c.WIN_SIZE, 'best score : '+score, self.high_score_font, 'white', 'cyan', 4, center=(c.WIN_SIZE[0]/2, 156), mode=1)
+    
+    def close(self):
+        super().close()
+        self.select(None)
     
     def render(self, surf):
         super().render(surf)
-        surf.blit(self.best_score_img, (0, 0))
-        self.l.render(surf)
+        surf.blit(self.high_score_img, (0, 0))
 
 
 class SettingsPage(BasePage):
@@ -172,11 +197,11 @@ class GameOverMenu():
         self.game_over_img = blit_glowing_text(
             self.game_over_img, 'Stellar Credits :', pygame.font.Font(c.fp, 30), 'white', 'yellow', center=(c.WIN_SIZE[0]-160, c.WIN_SIZE[1]/2 - 110))
     
-    def set_values(self, best_score=False):
+    def set_values(self, high_score=False):
         self.game_over_time_img = pygame.Surface(c.WIN_SIZE, pygame.SRCALPHA)
         c.blit_center(self.game_over_time_img, pygame.font.Font(c.fp, 40).render(str(self.g.current_time), True, 'cyan'), (110, c.WIN_SIZE[1]/2 - 50))
         c.blit_center(self.game_over_time_img, pygame.font.Font(c.fp, 40).render(str(self.g.current_credits), True, 'orange'), (c.WIN_SIZE[0]-160, c.WIN_SIZE[1]/2 - 50))
-        if best_score:
+        if high_score:
             c.blit_center(self.game_over_time_img, pygame.font.Font(c.fp, 30).render('New Best Time !', True, 'yellow'), (c.WIN_SIZE[0]/2, c.WIN_SIZE[1]/2 + 20))
     
     def _slot_replay(self):
@@ -214,11 +239,11 @@ class Menu():
     def setup_pages(self, game):
         self.spaceship_page = SpaceshipPage(game)
         self.mission_page = MissionsPage(game)
-        self.succes_page = SuccesPage(game)
+        self.succes_page = SuccessPage(game)
         self.settings_page = SettingsPage(game)
         self.credit_page = CreditPage(game)
         self.pages = [self.spaceship_page, self.mission_page, self.succes_page, self.settings_page, self.credit_page]
-        self.set_best_score(game.best_score)
+        self.set_high_score(game.gd.high_score)
         self.set_credits(game.credits)
         self.gom = GameOverMenu(game)
     
@@ -241,8 +266,8 @@ class Menu():
         self.retracting_buttons = self.pushing_buttons = False
         self.buttons_clickable = True
         
-    def set_best_score(self, score):
-        self.succes_page.set_best_score(score)
+    def set_high_score(self, score):
+        self.succes_page.set_high_score(score)
     
     def set_credits(self, currency):
         self.spaceship_page.set_credits(currency)
