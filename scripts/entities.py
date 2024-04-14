@@ -1,11 +1,14 @@
 
 import pygame
-from math import sqrt
+from math import sqrt, cos, sin, atan2, dist
 from random import uniform
+from time import time
+from os import listdir
+
+import scripts.core as c
 
 
-
-def collide(rect, circle):
+def collide_circle(rect, circle):
     testX = circle.centerx
     testY = circle.centery
 
@@ -19,34 +22,57 @@ def collide(rect, circle):
     elif circle.centery > rect.y + rect.height:
         testY = rect.y + rect.height
 
-    distX = circle.centerx - testX
-    distY = circle.centery - testY
-    distance = sqrt((distX * distX) + (distY * distY))
-
-    return distance <= circle.width/2
+    d = dist((testX, testY), circle.center)
+    return d <= circle.width/2
 
 
-spaceship_image = pygame.image.load('asset\\spaceship.png')
-spaceship_image.set_colorkey('black')
-spaceship_crashed_image = pygame.image.load('asset\\spaceship_crashed.png')
-spaceship_crashed_image.set_colorkey('black')
+def collide(player, a):
+    if collide_circle(player.rect, a.rect):
+        offset = (a.rect.x - player.rect.x, a.rect.y - player.rect.y)
+        if player.mask.overlap(a.mask, offset):
+            return True
+    return False
+
+
+def load_images():
+    global glow_img, light_img, spaceship_idle, spaceship_right, spaceship_left
+    glow_img = pygame.Surface((255, 255))
+    glow_img.fill((240 * 0.7, 215 * 0.7, 0))
+    light_img = pygame.image.load('asset\\light.png')
+    light_img.set_colorkey((0, 0, 0))
+    glow_img.blit(light_img, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    
+    spaceship_idle = pygame.image.load('asset\\spaceship\\idle.png').convert_alpha()
+    spaceship_right = [pygame.image.load('asset\\spaceship\\right\\'+name).convert_alpha() for name in listdir('asset\\spaceship\\right\\')]
+    spaceship_left = [pygame.image.load('asset\\spaceship\\left\\'+name).convert_alpha() for name in listdir('asset\\spaceship\\left\\')]
 
 
 class Player():
-    def __init__(self, x, y, game):
+    def __init__(self, game):
         self.g = game
-        self.rect = pygame.FRect(0, 0, 20, 40)
-        self.rect.center = (x, y)
+        self.rect = pygame.FRect(0, 0, 52, 50)
+        self.rect.center = c.MOUSE_POS
         self.velocity = 15 # To implement later
-        self.image = spaceship_image
+        self.image = spaceship_idle
+        self.mask = pygame.mask.from_surface(self.image)
     
     def crash(self):
-        self.image = spaceship_crashed_image
+        self.image = spaceship_idle
         
     def update(self, dt):
-        self.rect.center = self.g.mouse_pos
+        pos = c.MOUSE_POS
+        inclination = (pos[0] - self.rect.centerx) / 2.5
+        
+        if inclination < 0:
+            self.image = spaceship_left[min(4, int(-inclination))]
+        elif inclination > 0:
+            self.image = spaceship_right[min(4, int(inclination))]
+        else:
+            self.image = spaceship_idle
+        
+        self.rect.center = pos
         for a in self.g.asteroids:
-            if collide(self.rect, a.rect):
+            if collide(self, a):
                 return True
         return False
 
@@ -61,8 +87,51 @@ class Asteroid():
         self.image = pygame.transform.scale(image, (radius*2, radius*2))
         self.angle = 0
         self.rotation = uniform(0.05, 0.3)
+        mask_surf = pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
+        pygame.draw.circle(mask_surf, (255, 255, 255, 255), (radius+3, radius+3), radius-6)
+        self.mask = pygame.mask.from_surface(mask_surf)
         
     def update(self, speed, dt):
         self.angle -= self.rotation
         self.rect.x += self.motion[0] * (speed + self.velocity) * dt
         self.rect.y += self.motion[1] * (speed + self.velocity) * dt
+
+
+class StellarCredit():
+    def __init__(self, x, y, radius, velocity, game):
+        self.g = game
+        self.x = x
+        self.y = y
+        self.radius = radius
+        self.velocity = velocity
+        self.alive = True
+    
+    def update(self):
+        dx = self.g.player.rect.centerx - self.x
+        dy = self.g.player.rect.centery - self.y
+        d = sqrt(dx**2 + dy**2)
+        magnet_range = 18 + self.g.magnet_power * 20
+        default_speed = (self.velocity + self.g.speed) * self.g.dt/100
+        
+        if d <= magnet_range:
+            attraction = self.g.magnet_power / d * 100 + self.g.magnet_power * 3
+            rads = atan2(dy, dx)
+            speed = max(attraction * self.g.dt/100, default_speed)
+            
+            self.x += cos(rads) * speed
+            self.y += sin(rads) * speed
+            
+            if self.g.player.rect.collidepoint((self.x, self.y)):
+                self.alive = False
+                return True
+        else:
+            self.y += default_speed
+            if self.y > c.WIN_SIZE[1] + 10:
+                self.alive = False
+        return False
+    
+    def render(self, surf, offset):
+        diameter = sin(self.radius * 2 + time()) * 10 + 50
+        image = pygame.transform.scale(glow_img, (diameter, diameter))
+        c.blit_center(surf, image, (self.x + offset/2, self.y + offset/2), special_flags=pygame.BLEND_RGBA_ADD)
+        pygame.draw.circle(surf, 'white', (self.x + offset/2, self.y + offset/2), self.radius)
