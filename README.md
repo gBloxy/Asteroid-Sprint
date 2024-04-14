@@ -1,16 +1,17 @@
 # Asteroid Sprint
 
 A game where you have to navigate through falling asteroids as long as you can.  
-Share your best score in the discussion channel !
+Link of the itch.io game page : [Asteroid Sprint](https://g-bloxy.itch.io/asteroid-sprint).  
+The game is currently in development. The first version is released on itch.io. You can find its source code in the `first-version` branch.
 
-## Screenshots
+## Screenshots (old version)
 
 ![screenshot-menu](https://github.com/gBloxy/Asteroid-Sprint/assets/121670440/d89b798b-8686-4770-ba33-c3507b5193b6)
 ![screenshot-game](https://github.com/gBloxy/Asteroid-Sprint/assets/121670440/3dba2041-2a1f-4c0e-b16c-a12c825ef0bb)
 
 ## Play the game
 
-To launch the game, just execute the asteroid_sprint.py file inside the game folder.
+To launch the game, unzip the game folder, then execute the `asteroid_sprint.py` file.
 
 ## Requirements
 
@@ -26,14 +27,18 @@ pip uninstall pygame
 
 ## Contributing
 
-If you encounter any issues, have suggestions, or need support, please don't hesitate to reach out by creating an issue in the repository.  
+If you encounter any issues, have suggestions, or need support, please don't hesitate to reach out by creating an issue in the repository or leaving a comment on itch.io.  
 All feedbacks are welcome.
 
 ## Credits
 
-This game and all its images were created by g_Bloxy.  
+This game was created by g_Bloxy.  
 The spaceship fire trail is a customized version of the [fire vfx](https://github.com/kadir014/pygame-vfx) of @kadir014 on github.  
 The death particles are a customized version of the [vfx](https://github.com/eliczi/vfx) of @eliczi on github.  
 Font used : [orbitron](https://www.theleagueofmoveabletype.com/orbitron) from the league of moveable type.  
 Music used : Screen Saver from Kevin MacLeod ([incompetech.com](https://incompetech.com))   
-You can find all licenses in the licenses folder.
+You can find all licenses in the `licenses` folder.
+
+## LICENSE
+
+The game is licensed under the GPL-3.0 license - See the `LICENSE` file for details.
