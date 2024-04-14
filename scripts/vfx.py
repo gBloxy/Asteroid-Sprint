@@ -119,7 +119,7 @@ class GeometricObject():
 class Line(GeometricObject):
     def __init__(self, center):
         super().__init__(center)
-        self.length = randint(75, 100)*5  # customized
+        self.length = randint(75, 100) * 5
         self.create_polygon()
         self.factor = choice([-1, 1])
         self.calculate_direction()
@@ -136,7 +136,7 @@ class Line(GeometricObject):
 class Polygon(GeometricObject):
     def __init__(self, center):
         super().__init__(center)
-        self.length = randint(5, 30)*6  # customized
+        self.length = randint(5, 30) * 6
         self.create_polygon()
         self.factor = choice([-1, 1])
         self.calculate_direction()
@@ -158,7 +158,7 @@ class FireParticle():
         self.maxlife = randint(13 + int(size*5), 27 + int(size*10))
         self.life = self.maxlife
         self.dir = choice((-2, -1, 1, 2))
-        self.sin = randint(-10, 10)/7
+        self.sin = randint(-10, 10) / 7
         self.sinr = randint(5, 10)
         self.r = randint(0,2)
         self.ox = randint(-1, 1)

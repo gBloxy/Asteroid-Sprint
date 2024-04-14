@@ -5,11 +5,10 @@ import scripts.core as c
 
 
 hidden_icon = pygame.transform.scale(pygame.image.load('asset\\success\\hidden.png'), (56, 56))
-# c.swipe_color(hidden_icon, 'black', 'cyan')
 
 
 class Success():
-    def __init__(self, id, title, description, hidden=False, unlock_func=None):
+    def __init__(self, id, title, description, hidden=False):
         self.id = id
         self.title = title
         self.description = description
@@ -17,7 +16,6 @@ class Success():
         self.icon_locked = pygame.transform.grayscale(self.icon_unlocked)
         self.icon = hidden_icon if hidden else self.icon_locked
         self.hidden = hidden
-        self.unlock_func = unlock_func
         self.unlocked = False
     
     def unlock(self):
@@ -26,7 +24,8 @@ class Success():
 
 
 class SuccessManager():
-    def __init__(self):
+    def __init__(self, game):
+        self.game = game
         data = c.read_file('asset\\success.json')
         self.success_data, self.success_order = data['success'], data['order']
         self.success = {}
@@ -44,12 +43,14 @@ class SuccessManager():
         if not id in self.unlocked:
             self.unlocked.append(id)
             self.success[id].unlock()
+            self.game.set_popup('success', self.success[id].title)
 
 
 class GameDataManager():
-    def __init__(self):
+    def __init__(self, game):
+        self.game = game
         self.data_file = 'data\\data.json'
-        self.success_mgr = SuccessManager()
+        self.success_mgr = SuccessManager(game)
         self.load_data()
     
     def load_data(self):
@@ -74,6 +75,14 @@ class GameDataManager():
     
     def incr_game_nb(self):
         self.games_nb += 1
+        for nb in [50, 100, 200, 500, 1000]:
+            if self.games_nb == nb:
+                self.success_mgr.unlock(f'runs.{nb}')
+                return
+        if self.games_nb == 69:
+            self.success_mgr.unlock('humor.1')
+        elif self.games_nb == 420:
+            self.success_mgr.unlock('humor.2')
     
     def check_high_score(self, score):
         if c.time_to_seconds(score) > c.time_to_seconds(self.high_score):
@@ -81,6 +90,12 @@ class GameDataManager():
             return True
         else:
             return False
+    
+    def check_time_success(self, time):
+        for t in [1, 2, 3]:
+            if time == t:
+                self.success_mgr.unlock(f'time.{t}')
+                return
     
     def set_credits(self, credits):
         self.credits += credits

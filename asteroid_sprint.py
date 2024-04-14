@@ -1,5 +1,5 @@
 
-from random import randint, uniform, choice
+from random import randint, uniform, choice, random
 from time import time, ctime
 from sys import exit
 import pygame
@@ -9,7 +9,8 @@ from scripts.window import ShaderWindow
 from scripts.entities import Player, Asteroid, StellarCredit, load_images
 from scripts.vfx import Fire, Line, Polygon
 from scripts.gamedata import GameDataManager
-import scripts.menu as menu
+from scripts.menu import Menu
+import scripts.gui as gui
 import scripts.core as c
 
 
@@ -25,11 +26,12 @@ class Game():
         
         self.keys = None
         
-        self.gd = GameDataManager()
+        self.gd = GameDataManager(self)
         self.load_data()
         self.setup_sound()
         self.setup_ui()
-        self.menu = menu.Menu(self)
+        gui.game = self
+        self.menu = Menu(self)
         self.menu_active = True
         self.asteroid_images = c.load_image_folder('asset\\asteroids\\')
         load_images()
@@ -40,6 +42,8 @@ class Game():
         c.fp = self.font
         self.ui_surf = pygame.Surface(c.WIN_SIZE, pygame.SRCALPHA)
         self.time_font = pygame.font.Font(self.font, 24)
+        self.icon_success = pygame.transform.scale(pygame.image.load('asset\\success\\unlocked.png'), (56, 56))
+        self.icon_mission = pygame.transform.scale(pygame.image.load('asset\\success\\unlocked.png'), (56, 56))
     
     def setup_sound(self):
         pygame.mixer.music.load('asset\\Screen Saver.mp3')
@@ -130,19 +134,22 @@ class Game():
             sts += [(-1., -1., -1.) for i in range(c.MAX_STELLAR_CREDITS - len(sts))]
         return sts
     
+    def set_popup(self, type, message):
+        self.popup = gui.PopUp(type, message)
+    
     def start_game(self):
         self.menu_active = False
         self.game_start_time = time()
         self.gd.incr_game_nb()
         pygame.mouse.set_visible(False)
-        # clear asteroids to avoid player crashing when spawning
-        if self.player.update(self.dt):
-            self.asteroids.clear()
+        self.asteroids.clear()
+        self.spawn_asteroid()
+        self.first_asteroid = self.asteroids[0]
         
     def end_game(self):
         pygame.mouse.set_visible(True)
         # variable switch
-        self.player.crash()
+        collided = self.player.crash()
         self.fire.alive = False
         self.game_over = True
         self.animation = True
@@ -163,6 +170,11 @@ class Game():
         self.credits += self.current_credits
         self.gd.set_credits(self.current_credits)
         self.menu.set_credits(self.credits)
+        # check for success
+        if not self.gd.get_success('moron').unlocked:
+            if collided == self.first_asteroid:
+                self.gd.success_mgr.unlock('moron')
+        self.first_asteroid = None
     
     def reset(self):
         self.setup_game()
@@ -188,6 +200,7 @@ class Game():
         self.player = Player(self)
         self.fire = Fire(self)
         self.setup_stars()
+        self.popup = None
     
     def run(self):
         self.setup_game()
@@ -211,6 +224,14 @@ class Game():
             # update level variables
             if not self.game_over and not self.menu_active:
                 self.current_time = ctime(time()-self.game_start_time)[14:19]
+                
+                # check for time success
+                if not 'time.0' in self.gd.success_mgr.unlocked:
+                    if int(self.current_time[3:]) == 30:
+                        self.gd.success_mgr.unlock('time.0')
+                elif int(self.current_time[3:]) == 0: # every minute
+                    self.gd.check_time_success(int(self.current_time[:2]))
+                
                 # increase difficulty
                 self.speed += 0.06 * self.dt/100
                 if self.speed > 30:
@@ -239,7 +260,7 @@ class Game():
             # update background stars
             if not self.game_over and not self.menu_active:
                 # add new
-                if randint(0, 15) == 0:
+                if random() < 1/15:
                     self.add_bkg_star()
                 # move it
                 for p in self.particles:
@@ -269,9 +290,9 @@ class Game():
                     if a.rect.top > c.WIN_SIZE[1]+25:
                         self.asteroids.remove(a)
             
-            # update and render points
+            # update and render stellar credits
             if not self.game_over and not self.menu_active:
-                if randint(0, 100) == 0 and len(self.points) < c.MAX_STELLAR_CREDITS:
+                if random() < 1/100 and len(self.points) < c.MAX_STELLAR_CREDITS:
                     self.add_st()
                 for p in self.points:
                     if p.update():
@@ -307,7 +328,7 @@ class Game():
             if self.keys[pygame.K_m] and self.sound_switch_timer <= 0:
                 self.switch_sound(by_key=True)
             
-            # render and update menu
+            # update and render menu
             self.ui_surf.fill((0, 0, 0, 0))
             if self.menu_active:
                 self.menu.update()
@@ -322,6 +343,15 @@ class Game():
                 self.ui_surf.blit(st, (c.WIN_SIZE[0] - st.get_width() - 8, 12))
             if self.game_over and not self.animation:
                 self.menu.gom.render(self.ui_surf)
+            
+            # update and render success and mission screen popup
+            if self.keys[pygame.K_SPACE]:
+                self.set_popup('success', 'Fly me to the moon')
+            if self.popup:
+                if self.popup.update(self.dt):
+                    self.popup = None
+                else:
+                    self.popup.render(self.ui_surf)
             
             # self.display.blit(self.ui_surf, (0, 0))
             

@@ -55,9 +55,11 @@ class Player():
         self.velocity = 15 # To implement later
         self.image = spaceship_idle
         self.mask = pygame.mask.from_surface(self.image)
+        self.collided = None
     
     def crash(self):
         self.image = spaceship_idle
+        return self.collided
         
     def update(self, dt):
         pos = c.MOUSE_POS
@@ -73,6 +75,7 @@ class Player():
         self.rect.center = pos
         for a in self.g.asteroids:
             if collide(self, a):
+                self.collided = a
                 return True
         return False
 
