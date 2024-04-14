@@ -5,6 +5,9 @@ from scripts.vfx import blit_glowing_text, generate_glowing_text
 import scripts.core as c
 
 
+game = None
+
+
 class Button():
     def __init__(self, center, text, font_size=26, size=None, border=True, gaussian_power=5, align='center'):
         self.image = pygame.Surface((400, 100), pygame.SRCALPHA)
@@ -332,6 +335,55 @@ class SuccessIcon():
             c.increase_rect(self.rect, (-1, -1))
     
     def render(self, surf):
-        surf.blit(self.bkg, self.rect)
+        pygame.draw.rect(surf, (50, 50, 50, 120), self.rect, border_radius=10)
         pygame.draw.rect(surf, 'lightblue', self.rect, width=3, border_radius=10)
         c.blit_center(surf, self.success.icon, self.rect.center)
+
+
+class PopUp():
+    speed = 20
+    time  = 2000
+    width = 280
+    def __init__(self, type, text):
+        self.rect = pygame.Rect(c.WIN_SIZE[0], 70, self.width, 66)
+        self.surface = pygame.Surface(self.rect.size, pygame.SRCALPHA)
+        
+        pygame.draw.rect(self.surface, (50., 50., 50., 120), (0, 0, *self.rect.size), border_radius=20)
+        pygame.draw.rect(self.surface, 'lightblue', (0, 0, *self.rect.size), width=3, border_radius=20)
+        
+        if type == 'success':
+            icon = game.icon_success
+            title = 'Achievement Unlocked'
+        else:
+            icon = game.icon_mission
+            title = 'Mission Complete'
+        
+        self.surface.blit(icon, (5, 5))
+        self.surface.blit(pygame.font.Font(c.fp, 15).render(title, True, 'white'), (65, 15))
+        self.surface.blit(pygame.font.Font(c.fp, 15).render(text, True, 'lightgray'), (65, 37))
+        
+        self.timer = 0
+        self.opening = True
+        self.waiting = self.closing = False
+    
+    def update(self, dt):
+        if self.opening:
+            if self.rect.left > c.WIN_SIZE[0] - self.width + 16:
+                self.rect.left = max(c.WIN_SIZE[0] - self.width + 16, self.rect.left - self.speed)
+            else:
+                self.opening = False
+                self.waiting = True
+                self.timer = self.time
+        elif self.waiting:
+            self.timer -= dt
+            if self.timer <= 0:
+                self.waiting = False
+                self.closing = True
+        elif self.closing:
+            if self.rect.left < c.WIN_SIZE[0]:
+                self.rect.left += self.speed
+            else:
+                return True
+    
+    def render(self, surf):
+        surf.blit(self.surface, self.rect)
