@@ -56,12 +56,11 @@ def time_to_seconds(time_str):
     return minutes * 60 + seconds
 
 
-def line_wrapp(surface, text, color, rect, font, aa=False, bkg=None):
+def line_wrapp(surface, text, color, rect, font, aa=True, bkg=None):
     rect = pygame.Rect(rect)
     y = rect.top
     lineSpacing = 5
     fontHeight = font.size("Tg")[1]
-    
     while text:
         i = 1
         if y + fontHeight > rect.bottom:
