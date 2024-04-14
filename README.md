@@ -1,7 +1,7 @@
 # Asteroid Sprint
 
 A game where you have to navigate through falling asteroids as long as you can.  
-Share your best score in the discussion channel !
+Link of the itch.io game page : [Asteroid Sprint](https://g-bloxy.itch.io/asteroid-sprint)
 
 ## Screenshots
 
@@ -10,7 +10,7 @@ Share your best score in the discussion channel !
 
 ## Play the game
 
-To launch the game, just execute the asteroid_sprint.py file inside the game folder.
+To launch the game, unzip the game folder, then execute the `asteroid_sprint.py` file.
 
 ## Requirements
 
@@ -26,7 +26,7 @@ pip uninstall pygame
 
 ## Contributing
 
-If you encounter any issues, have suggestions, or need support, please don't hesitate to reach out by creating an issue in the repository.  
+If you encounter any issues, have suggestions, or need support, please don't hesitate to reach out by creating an issue in the repository or leaving a comment on itch.io.  
 All feedbacks are welcome.
 
 ## Credits
@@ -37,3 +37,7 @@ The death particles are a customized version of the [vfx](https://github.com/eli
 Font used : [orbitron](https://www.theleagueofmoveabletype.com/orbitron) from the league of moveable type.  
 Music used : Screen Saver from Kevin MacLeod ([incompetech.com](https://incompetech.com))   
 You can find all licenses in the licenses folder.
+
+## License
+
+The game is licensed under the GPL-3.0 License - See the `LICENSE` file for details.
