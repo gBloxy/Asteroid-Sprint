@@ -52,26 +52,41 @@ class GameDataManager():
         self.data_file = 'data\\data.json'
         self.success_mgr = SuccessManager(game)
         self.load_data()
+        self.load_shop_data()
     
     def load_data(self):
         data = c.read_file(self.data_file)
-        self.high_score = data['time']
-        self.credits = int(data['currency'])
+        self.high_score   = data['score']
+        self.credits      = int(data['currency'])
         self.magnet_power = int(data['magnet'])
-        self.games_nb = int(data['games_nb'])
+        self.games_nb     = int(data['games_nb'])
+        self.powers       = data['powers']
+        self.repulsions   = data['repulsions']
+        self.freezes      = data['freezes']
         self.success_mgr.setup(data['unlocked_success'])
     
     def get_data(self):
         return {
-            'time': self.high_score,
-            'currency': str(self.credits),
-            'magnet': str(self.magnet_power),
-            'games_nb': str(self.games_nb),
-            'unlocked_success': self.success_mgr.unlocked
+            'score': self.high_score,
+            'currency': self.game.credits,
+            'magnet': self.game.magnet_power,
+            'games_nb': self.games_nb,
+            'unlocked_success': self.success_mgr.unlocked,
+            'powers': self.powers,
+            'freezes': self.freezes,
+            'repulsions': self.repulsions
             }
     
     def save_data(self):
         c.write_file(self.data_file, self.get_data())
+    
+    def load_shop_data(self):
+        data = c.read_file('asset/spaceship.json')
+        self.magnet_prices = data['magnet_prices']
+        self.unlock_freeze = data['unlock_freeze']
+        self.unlock_repulsion = data['unlock_repulsion']
+        self.freeze_prices = data['freeze']
+        self.repulsion_prices = data['repulsion']
     
     def incr_game_nb(self):
         self.games_nb += 1
@@ -85,7 +100,7 @@ class GameDataManager():
             self.success_mgr.unlock('humor.2')
     
     def check_high_score(self, score):
-        if c.time_to_seconds(score) > c.time_to_seconds(self.high_score):
+        if score > self.high_score:
             self.high_score = score
             return True
         else:
@@ -95,10 +110,7 @@ class GameDataManager():
         for t in [1, 2, 3]:
             if time == t:
                 self.success_mgr.unlock(f'time.{t}')
-                return
-    
-    def set_credits(self, credits):
-        self.credits += credits
+                break
     
     def get_success(self, id):
         return self.success_mgr.success[id]

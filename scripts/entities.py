@@ -3,7 +3,6 @@ import pygame
 from math import sqrt, cos, sin, atan2, dist
 from random import uniform
 from time import time
-from os import listdir
 
 import scripts.core as c
 
@@ -34,52 +33,6 @@ def collide(player, a):
     return False
 
 
-def load_images():
-    global glow_img, light_img, spaceship_idle, spaceship_right, spaceship_left
-    glow_img = pygame.Surface((255, 255))
-    glow_img.fill((240 * 0.7, 215 * 0.7, 0))
-    light_img = pygame.image.load('asset\\light.png')
-    light_img.set_colorkey((0, 0, 0))
-    glow_img.blit(light_img, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-    
-    spaceship_idle = pygame.image.load('asset\\spaceship\\idle.png').convert_alpha()
-    spaceship_right = [pygame.image.load('asset\\spaceship\\right\\'+name).convert_alpha() for name in listdir('asset\\spaceship\\right\\')]
-    spaceship_left = [pygame.image.load('asset\\spaceship\\left\\'+name).convert_alpha() for name in listdir('asset\\spaceship\\left\\')]
-
-
-class Player():
-    def __init__(self, game):
-        self.g = game
-        self.rect = pygame.FRect(0, 0, 52, 50)
-        self.rect.center = c.MOUSE_POS
-        self.velocity = 15 # To implement later
-        self.image = spaceship_idle
-        self.mask = pygame.mask.from_surface(self.image)
-        self.collided = None
-    
-    def crash(self):
-        self.image = spaceship_idle
-        return self.collided
-        
-    def update(self, dt):
-        pos = c.MOUSE_POS
-        inclination = (pos[0] - self.rect.centerx) / 2.5
-        
-        if inclination < 0:
-            self.image = spaceship_left[min(4, int(-inclination))]
-        elif inclination > 0:
-            self.image = spaceship_right[min(4, int(inclination))]
-        else:
-            self.image = spaceship_idle
-        
-        self.rect.center = pos
-        for a in self.g.asteroids:
-            if collide(self, a):
-                self.collided = a
-                return True
-        return False
-
-
 class Asteroid():
     def __init__(self, pos, radius, velocity, image, motion=[0,1]):
         self.rect = pygame.FRect(0, 0, radius*2, radius*2)
@@ -93,31 +46,55 @@ class Asteroid():
         mask_surf = pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
         pygame.draw.circle(mask_surf, (255, 255, 255, 255), (radius+3, radius+3), radius-6)
         self.mask = pygame.mask.from_surface(mask_surf)
+        self.force = [0, 0]
+    
+    def apply_force(self, force):
+        self.force = force
+        self.rotation *= 4
         
-    def update(self, speed, dt):
-        self.angle -= self.rotation
-        self.rect.x += self.motion[0] * (speed + self.velocity) * dt
-        self.rect.y += self.motion[1] * (speed + self.velocity) * dt
+    def update(self, speed, rot_speed, dt):
+        self.angle -= self.rotation * rot_speed
+        
+        vel = max(self.velocity + speed, c.MINIMUM_SPEED) * dt
+        
+        self.rect.x += self.motion[0] * vel
+        self.rect.y += self.motion[1] * vel
+        
+        if any(self.force):
+            self.rect.x += self.force[0] * vel
+            self.rect.y += self.force[1] * vel
 
 
-class StellarCredit():
-    def __init__(self, x, y, radius, velocity, game):
+class Collectible():
+    def __init__(self, x, y, size, velocity, game):
         self.g = game
         self.x = x
         self.y = y
-        self.radius = radius
+        self.size = size
         self.velocity = velocity
+        self.force = [0, 0]
         self.alive = True
     
-    def update(self):
+    def apply_force(self, force):
+        self.force = force
+    
+    def collect(self):
+        self.alive = False
+    
+    def update(self, speed, magnet_power, dt):
+        default_speed = max(self.velocity + speed, c.MINIMUM_SPEED) * dt
+        
+        if any(self.force):
+            self.x += self.force[0] * default_speed
+            self.y += self.force[1] * default_speed
+        
         dx = self.g.player.rect.centerx - self.x
         dy = self.g.player.rect.centery - self.y
         d = sqrt(dx**2 + dy**2)
-        magnet_range = 18 + self.g.magnet_power * 20
-        default_speed = (self.velocity + self.g.speed) * self.g.dt/100
+        magnet_range = 18 + magnet_power * 20
         
         if d <= magnet_range:
-            attraction = self.g.magnet_power / d * 100 + self.g.magnet_power * 3
+            attraction = magnet_power / d * 100 + magnet_power * 3
             rads = atan2(dy, dx)
             speed = max(attraction * self.g.dt/100, default_speed)
             
@@ -125,16 +102,51 @@ class StellarCredit():
             self.y += sin(rads) * speed
             
             if self.g.player.rect.collidepoint((self.x, self.y)):
-                self.alive = False
-                return True
+                self.collect()
         else:
             self.y += default_speed
-            if self.y > c.WIN_SIZE[1] + 10:
+            
+            if self.y > c.WIN_SIZE[1] + self.size or self.x > c.WIN_SIZE[0] + self.size or self.x < -self.size:
                 self.alive = False
-        return False
+
+
+class StellarCredit(Collectible):
+    def __init__(self, x, y, radius, velocity, game):
+        super().__init__(x, y, 10, velocity, game)
+        self.radius = radius
+    
+    def collect(self):
+        self.g.current_credits += self.radius - 2
+        self.g.score += 30
+        self.alive = False
     
     def render(self, surf, offset):
         diameter = sin(self.radius * 2 + time()) * 10 + 50
-        image = pygame.transform.scale(glow_img, (diameter, diameter))
+        image = pygame.transform.scale(self.g.asset.glow_img, (diameter, diameter))
         c.blit_center(surf, image, (self.x + offset/2, self.y + offset/2), special_flags=pygame.BLEND_RGBA_ADD)
         pygame.draw.circle(surf, 'white', (self.x + offset/2, self.y + offset/2), self.radius)
+
+
+class Bonus(Collectible):
+    def __init__(self, x, y, velocity, callback, img, game):
+        super().__init__(x, y, img.get_width()//2, velocity, game)
+        self.img = img
+        self.angle = 0
+        self.rotation = uniform(0.1, 0.35)
+        self.callback = callback
+    
+    def collect(self):
+        self.g.score += 40
+        self.callback()
+        self.alive = False
+    
+    def apply_force(self, force):
+        self.force = force
+        self.rotation *= 4
+    
+    def update(self, speed, magnet_power, dt):
+        super().update(speed, magnet_power, dt)
+        self.angle -= self.rotation
+    
+    def render(self, surf, offset):
+        c.blit_center(surf, pygame.transform.rotate(self.img, self.angle), (self.x + offset, self.y + offset))

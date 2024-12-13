@@ -49,17 +49,19 @@ def generate_glowing_text(size, text, font, text_color, glowing_color, gaussian_
 
 # DEATH EFFECT ----------------------------------------------------------------
 
+default_col = (255, 255, 255, 255)
+
+
 class GeometricObject():
-    alpha = 255
-    color = (255, 255, 255, alpha)
-    def __init__(self, center):
+    def __init__(self, center, color=default_col):
+        self.color = color
         self.points = [[], [], [], []]
         self.center = list(center)
         self.angle = randint(-180, 180)
         self.perpendicular_straight = randint(2, 3)
         self.alive = True
         self.dir = None
-        self.speed = randint(5, 9) # customized
+        self.speed = randint(5, 9)
         self.decay_factor = 0.07
         self.delta = 0.008 * 25
     
@@ -117,8 +119,8 @@ class GeometricObject():
 
 
 class Line(GeometricObject):
-    def __init__(self, center):
-        super().__init__(center)
+    def __init__(self, center, color=default_col):
+        super().__init__(center, color)
         self.length = randint(75, 100) * 5
         self.create_polygon()
         self.factor = choice([-1, 1])
@@ -134,8 +136,8 @@ class Line(GeometricObject):
 
 
 class Polygon(GeometricObject):
-    def __init__(self, center):
-        super().__init__(center)
+    def __init__(self, center, color=default_col):
+        super().__init__(center, color)
         self.length = randint(5, 30) * 6
         self.create_polygon()
         self.factor = choice([-1, 1])

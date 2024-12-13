@@ -1,11 +1,28 @@
 
-from os import listdir
 from json import dump, load
+from math import pi
 import pygame
 
 
 WIN_SIZE = [525, 650]
+
+DEBUG = True
+
 MAX_STELLAR_CREDITS = 5
+MAGNET_DURATION = 7000
+FREEZE_DURATION = 2000
+SHIELD_DURATION = 5000
+STARS_PROB = 1/15
+BONUSES_PROB = 1/700
+MINIMUM_SPEED = 3
+SCORE_DELAY = 1
+POWER_DELAY = 3000
+
+PI_2 = pi / 2
+PI_3 = pi / 3
+TWO_PI = pi * 2
+TWO_PI_3 = 2 * PI_3
+
 
 CLICK = False
 MOUSE_POS = (0, 0)
@@ -22,16 +39,6 @@ def blit_center(surface, surf, center, *args, **kwargs):
 
 def lerp(a, b, t):
     return a + t * (b - a)
-
-
-def load_image_folder(path):
-    images = []
-    for name in listdir(path):
-        if name.endswith('.png'):
-            surf = pygame.image.load(path+name).convert()
-            surf.set_colorkey('white')
-            images.append(surf)
-    return images
 
 
 def increase_rect(rect, size):
@@ -77,3 +84,12 @@ def line_wrapp(surface, text, color, rect, font, aa=True, bkg=None):
         surface.blit(image, (rect.left, y))
         y += fontHeight + lineSpacing
         text = text[i:]
+
+
+def swap_color(surf, old, new):
+    pixels = pygame.surfarray.pixels3d(surf)
+    old_col = pygame.Color(old)
+    mask = (pixels == (old_col.r, old_col.g, old_col.b)).all(axis=-1)
+    new_col = pygame.Color(new)
+    pixels[mask] = (new_col.r, new_col.g, new_col.b)
+    return surf

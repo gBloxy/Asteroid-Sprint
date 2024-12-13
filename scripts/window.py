@@ -17,10 +17,11 @@ class ShaderWindow():
             1.0, -1.0, 1.0, 1.0,  # bottomright
             ]))
         self.shader_path = shader_path
-        vert_shader = self.load_shader_file('shader.vert')
-        frag_shader = self.load_shader_file('shader.frag')
+        vert_shader  = self.load_shader_file('shader.vert')
+        frag_shader  = self.load_shader_file('shader.frag')
         self.program = self.ctx.program(vertex_shader=vert_shader, fragment_shader=frag_shader)
         self.vao = self.ctx.vertex_array(self.program, [(self.vbo, '2f 2f', 'vert', 'texcoord')]) # vertex array object
+        self.vert_code = vert_shader
         self.index = 0
         self.time = 0
     
@@ -58,6 +59,18 @@ class ShaderWindow():
         tex.swizzle = 'BGRA'
         tex.write(surf.get_view('1'))
         return tex
+    
+    def loading_screen(self, image_src):
+        frag_shader = self.load_shader_file('loading.frag')
+        prog = self.ctx.program(vertex_shader=self.vert_code, fragment_shader=frag_shader)
+        vao = self.ctx.vertex_array(prog, [(self.vbo, '2f 2f', 'vert', 'texcoord')])
+        index = self.get_index()
+        tex = self.surf_to_texture(pygame.image.load(image_src).convert())
+        tex.use(index)
+        prog['tex'] = index
+        vao.render(mode=moderngl.TRIANGLE_STRIP)
+        pygame.display.flip()
+        tex.release()
     
     def update(self, dt, **variables):
         self.time += dt/1000

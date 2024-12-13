@@ -4,7 +4,7 @@ import pygame
 
 import scripts.core as c
 from scripts.vfx import blit_glowing_text, generate_glowing_text
-from scripts.gui import Button, AnimatedButton, ClickableText, SwitchButton, Slider, SuccessIcon, SuccessLine
+from scripts.gui import Button, AnimatedButton, ClickableText, SwitchButton, Slider, SuccessIcon, SuccessLine, Upgrader, Container, TexturedButton
 
 
 class BasePage():
@@ -62,25 +62,149 @@ class BasePage():
 class SpaceshipPage(BasePage):
     def __init__(self, game):
         super().__init__('Spaceship', game)
+        self.name_font = pygame.font.Font(c.fp, 25)
         self.credits_font = pygame.font.Font(c.fp, 22)
+        self.prices_font = pygame.font.Font(c.fp, 18)
+        
+        sep = 20
+        
         self.image = blit_glowing_text(self.image, 'Stellar Credits :', self.credits_font, 'white', 'cyan', topleft=(40, 170))
+        self.image = blit_glowing_text(self.image, 'Magnet', self.name_font, 'white', 'cyan', topleft=(80, 250))
+        self.image = blit_glowing_text(self.image, 'Time freeze', self.name_font, 'white', 'cyan', topleft=(80, 325 + sep))
+        self.image = blit_glowing_text(self.image, 'Repulsion', self.name_font, 'white', 'cyan', topleft=(80, 400 + sep))
+        
+        text_size = self.name_font.size('Magnet')
+        self.upgrader = Upgrader(100 + text_size[0], 248 + text_size[1] / 2)
+        self.add_widget(self.upgrader)
+        
+        self.add_button(self.upgrader, self.upgrade_magnet)
+        
+        magnet_level = game.magnet_power
+        self.upgrader.set(magnet_level)
+        if magnet_level < 10:
+            self.magnet_price, self.magnet_pos = self.get_price_surf(self.upgrader, self.g.gd.magnet_prices[magnet_level-1])
+        
+        text_size = self.name_font.size('Time freeze')
+        self.freeze = Container(100 + text_size[0], 323 + text_size[1] / 2 + sep)
+        self.add_widget(self.freeze)
+        
+        freeze_nb = game.gd.freezes
+        self.freeze.set(freeze_nb)
+        if freeze_nb < 3:
+            price = self.g.gd.freeze_prices[freeze_nb] if 'freeze' in self.g.gd.powers else self.g.gd.unlock_freeze
+            self.freeze_price, self.freeze_pos = self.get_price_surf(self.freeze, price)
+        
+        self.add_button(self.freeze, self.new_freeze)
+        
+        text_size = self.name_font.size('Repulsion')
+        self.repulsion = Container(126 + text_size[0], 398 + text_size[1] / 2 + sep)
+        self.add_widget(self.repulsion)
+        
+        rep_nb = game.gd.repulsions
+        self.repulsion.set(rep_nb)
+        if rep_nb < 3:
+            price = self.g.gd.repulsion_prices[rep_nb] if 'repulsion' in self.g.gd.powers else self.g.gd.unlock_repulsion
+            self.rep_price, self.rep_pos = self.get_price_surf(self.repulsion, price)
+        
+        self.add_button(self.repulsion, self.new_repulsion)
+        
+    def add_button(self, parent, callback):
+        pos = (parent.rect.right + 30, parent.rect.centery)
+        button = TexturedButton(pos, self.g.asset.button, self.g.asset.button_hovered, self.g.asset.button_clicked, callback)
+        self.add_widget(button)
     
     def set_credits(self, currency):
-        self.credits_img = self.credits_font.render(str(currency), True, 'white')
-        
+        self.credits_img = self.credits_font.render(str(currency), True, 'gold')
+    
+    def get_price_surf(self, parent, price):
+        surf = self.prices_font.render(str(price), True, 'cyan' if self.affordable(price) else 'red')
+        pos = (parent.rect.right - surf.get_width() - 10, parent.rect.bottom + 5)
+        return surf, pos
+    
+    def affordable(self, price):
+        return price <= self.g.credits
+    
+    def upgrade_magnet(self):
+        level = self.g.magnet_power
+        if level < 10:
+            price = self.g.gd.magnet_prices[level-1]
+            if self.affordable(price):
+                self.g.magnet_power += 1
+                self.upgrader.increment()
+                self.g.purchase(price)
+                if level + 1 < 10:
+                    self.magnet_price, self.magnet_pos = self.get_price_surf(self.upgrader, self.g.gd.magnet_prices[level])
+    
+    def new_freeze(self):
+        level = self.g.gd.freezes
+        if level < 3:
+            if 'freeze' in self.g.gd.powers:
+                price = self.g.gd.freeze_prices[level]
+            else:
+                price = self.g.gd.unlock_freeze
+            if self.affordable(price):
+                if not 'freeze' in self.g.gd.powers:
+                    self.g.gd.powers.append('freeze')
+                self.g.gd.freezes += 1
+                self.g.hud.freeze += 1
+                self.freeze.increment()
+                self.g.purchase(price)
+                if level + 1 < 3:
+                    self.freeze_price, self.freeze_pos = self.get_price_surf(self.freeze, self.g.gd.freeze_prices[level+1])
+    
+    def new_repulsion(self):
+        level = self.g.gd.repulsions
+        if level < 3:
+            if 'repulsion' in self.g.gd.powers:
+                price = self.g.gd.repulsion_prices[level]
+            else:
+                price = self.g.gd.unlock_repulsion
+            if self.affordable(price):
+                if not 'repulsion' in self.g.gd.powers:
+                    self.g.gd.powers.append('repulsion')
+                self.g.gd.repulsions += 1
+                self.g.hud.repulsion += 1
+                self.repulsion.increment()
+                self.g.purchase(price)
+                if level + 1 < 3:
+                    self.rep_price, self.rep_pos = self.get_price_surf(self.repulsion, self.g.gd.repulsion_prices[level + 1])
+    
+    def lose_freeze(self):
+        level = self.g.gd.freezes
+        price = self.g.gd.freeze_prices[level]
+        self.freeze.decrement()
+        self.freeze_price, self.freeze_pos = self.get_price_surf(self.freeze, price)
+    
+    def lose_repulsion(self):
+        level = self.g.gd.repulsions
+        price = self.g.gd.repulsion_prices[level]
+        self.repulsion.decrement()
+        self.rep_price, self.rep_pos = self.get_price_surf(self.repulsion, price)
+    
     def render(self, surf):
         super().render(surf)
         surf.blit(self.credits_img, (245, 170))
+        if self.g.magnet_power < 10:
+            surf.blit(self.magnet_price, self.magnet_pos)
+        if self.freeze.level < 3:
+            surf.blit(self.freeze_price, self.freeze_pos)
+        if self.repulsion.level < 3:
+            surf.blit(self.rep_price, self.rep_pos)
 
 
-class MissionsPage(BasePage):
+class LeaderboardPage(BasePage):
     def __init__(self, game):
-        super().__init__('Missions', game)
+        super().__init__('Leaderboard', game)
+        self.missions_area = pygame.Rect(0, 140, c.WIN_SIZE[0], 392)
+        self.surf = pygame.Surface(self.missions_area.size, pygame.SRCALPHA)
+        
+    def render(self, surf):
+        super().render(surf)
 
 
 class SuccessPage(BasePage):
     def __init__(self, game):
-        super().__init__('Succes', game)
+        super().__init__('Success', game)
         self.high_score_font = pygame.font.Font(c.fp, 25)
         self.selected = None
         
@@ -105,7 +229,7 @@ class SuccessPage(BasePage):
     
     def set_high_score(self, score):
         self.high_score_img = generate_glowing_text(
-            c.WIN_SIZE, 'best score : '+score, self.high_score_font, 'white', 'cyan', 4, center=(c.WIN_SIZE[0]/2, 156), mode=1)
+            c.WIN_SIZE, 'high score : '+str(score), self.high_score_font, 'white', 'cyan', 4, center=(c.WIN_SIZE[0]/2, 156), mode=1)
     
     def close(self):
         super().close()
@@ -147,7 +271,7 @@ class CreditPage(BasePage):
         github_link = ClickableText((296, 412), '@gBloxy', font_size=14)
         github_link.set_callback(lambda: open_url(c.GITHUB_URL))
         self.add_widget(github_link)
-        c.blit_center(self.image, pygame.image.load('asset\\logo.png').convert_alpha(), (c.WIN_SIZE[0] / 2 + 10, 490))
+        c.blit_center(self.image, game.asset.logo, (c.WIN_SIZE[0] / 2 + 10, 490))
     
     def add_line(self, text):
         self.line_y += 20
@@ -193,16 +317,16 @@ class GameOverMenu():
         self.game_over_img = generate_glowing_text(
             c.WIN_SIZE, 'GAME OVER', pygame.font.Font(c.fp, 63), 'white', 'red', center=(c.WIN_SIZE[0]/2, c.WIN_SIZE[1]/2 - 200))
         self.game_over_img = blit_glowing_text(
-            self.game_over_img, 'Time :', pygame.font.Font(c.fp, 30), 'white', 'cyan', center=(110, c.WIN_SIZE[1]/2 - 110))
+            self.game_over_img, 'Score :', pygame.font.Font(c.fp, 30), 'white', 'cyan', center=(110, c.WIN_SIZE[1]/2 - 110))
         self.game_over_img = blit_glowing_text(
             self.game_over_img, 'Stellar Credits :', pygame.font.Font(c.fp, 30), 'white', 'yellow', center=(c.WIN_SIZE[0]-160, c.WIN_SIZE[1]/2 - 110))
     
     def set_values(self, high_score=False):
         self.game_over_time_img = pygame.Surface(c.WIN_SIZE, pygame.SRCALPHA)
-        c.blit_center(self.game_over_time_img, pygame.font.Font(c.fp, 40).render(str(self.g.current_time), True, 'cyan'), (110, c.WIN_SIZE[1]/2 - 50))
+        c.blit_center(self.game_over_time_img, pygame.font.Font(c.fp, 40).render(str(self.g.score), True, 'cyan'), (110, c.WIN_SIZE[1]/2 - 50))
         c.blit_center(self.game_over_time_img, pygame.font.Font(c.fp, 40).render(str(self.g.current_credits), True, 'orange'), (c.WIN_SIZE[0]-160, c.WIN_SIZE[1]/2 - 50))
         if high_score:
-            c.blit_center(self.game_over_time_img, pygame.font.Font(c.fp, 30).render('New Best Time !', True, 'yellow'), (c.WIN_SIZE[0]/2, c.WIN_SIZE[1]/2 + 20))
+            c.blit_center(self.game_over_time_img, pygame.font.Font(c.fp, 30).render('New High Score !', True, 'yellow'), (c.WIN_SIZE[0]/2, c.WIN_SIZE[1]/2 + 20))
     
     def _slot_replay(self):
         self.g.reset()
@@ -232,17 +356,18 @@ class Menu():
         
     def create_main_image(self, game):
         image = pygame.Surface(c.WIN_SIZE, pygame.SRCALPHA)
-        image = blit_glowing_text(image, 'ASTEROID', pygame.font.Font(c.fp, 63), 'white', 'cyan', center=(c.WIN_SIZE[0]/2, 90))
-        image = blit_glowing_text(image, 'SPRINT', pygame.font.Font(c.fp, 63), 'white', 'cyan', center=(c.WIN_SIZE[0]/2, 160))
+        font  =  pygame.font.Font(c.fp, 63)
+        image = blit_glowing_text(image, 'ASTEROID',font, 'white', 'cyan', center=(c.WIN_SIZE[0]/2, 90))
+        image = blit_glowing_text(image, 'SPRINT', font, 'white', 'cyan', center=(c.WIN_SIZE[0]/2, 160))
         return image
     
     def setup_pages(self, game):
         self.spaceship_page = SpaceshipPage(game)
-        self.mission_page = MissionsPage(game)
+        self.leaderboard_page = LeaderboardPage(game)
         self.succes_page = SuccessPage(game)
         self.settings_page = SettingsPage(game)
         self.credit_page = CreditPage(game)
-        self.pages = [self.spaceship_page, self.mission_page, self.succes_page, self.settings_page, self.credit_page]
+        self.pages = [self.spaceship_page, self.succes_page, self.leaderboard_page, self.settings_page, self.credit_page]
         self.set_high_score(game.gd.high_score)
         self.set_credits(game.credits)
         self.gom = GameOverMenu(game)
@@ -253,9 +378,9 @@ class Menu():
         
         size = [200, 55]
         self.spaceship_button = Button((85, c.WIN_SIZE[1]/2 + 55), 'Spaceship', size=size, align='right')
-        self.mission_button = Button((62, c.WIN_SIZE[1]/2 + 135), 'Missions', size=size, align='right')
-        self.succes_button = Button((75, c.WIN_SIZE[1]/2 + 215), 'Succes', size=size, align='right')
-        self.buttons += [self.spaceship_button, self.mission_button, self.succes_button]
+        self.success_button = Button((62, c.WIN_SIZE[1]/2 + 135), 'Success', size=size, align='right')
+        self.leaderboard_button = Button((75, c.WIN_SIZE[1]/2 + 215), 'Rankings', size=size, align='right')
+        self.buttons += [self.spaceship_button, self.success_button, self.leaderboard_button]
         
         self.settings_button = Button((c.WIN_SIZE[0] - 85, c.WIN_SIZE[1]/2 + 55), 'Settings', size=size, align='left')
         self.credits_button = Button((c.WIN_SIZE[0] - 62, c.WIN_SIZE[1]/2 + 135), 'Credits', size=size, align='left')
@@ -271,7 +396,7 @@ class Menu():
     
     def set_credits(self, currency):
         self.spaceship_page.set_credits(currency)
-    
+        
     def retract_buttons(self):
         self.retracting_buttons = True
         self.buttons_clickable = False
@@ -284,26 +409,26 @@ class Menu():
     def process_button_retracting(self):
         vel = 15
         if self.spaceship_button.rect.right > 0:
-            self.play_button.rect.y -= vel*2
-            self.spaceship_button.rect.x -= vel
-            self.mission_button.rect.x -= vel
-            self.succes_button.rect.x -= vel
-            self.settings_button.rect.x += vel
-            self.credits_button.rect.x += vel
-            self.quit_button.rect.x += vel
+            self.play_button.move(0, -vel*2)
+            self.spaceship_button.move(-vel, 0)
+            self.leaderboard_button.move(-vel, 0)
+            self.success_button.move(-vel, 0)
+            self.settings_button.move(vel, 0)
+            self.credits_button.move(vel, 0)
+            self.quit_button.move(vel, 0)
         else:
             self.retracting_buttons = False
     
     def process_button_pushing(self):
         vel = 15
         if self.play_button.rect.centery != 275:
-            self.play_button.rect.y += vel*2
-            self.spaceship_button.rect.x += vel
-            self.mission_button.rect.x += vel
-            self.succes_button.rect.x += vel
-            self.settings_button.rect.x -= vel
-            self.credits_button.rect.x -= vel
-            self.quit_button.rect.x -= vel
+            self.play_button.move(0, vel*2)
+            self.spaceship_button.move(vel, 0)
+            self.leaderboard_button.move(vel, 0)
+            self.success_button.move(vel, 0)
+            self.settings_button.move(-vel, 0)
+            self.credits_button.move(-vel, 0)
+            self.quit_button.move(-vel, 0)
         else:
             self.pushing_buttons = False
             self.buttons_clickable = True

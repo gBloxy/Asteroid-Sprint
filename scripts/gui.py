@@ -5,7 +5,7 @@ from scripts.vfx import blit_glowing_text, generate_glowing_text
 import scripts.core as c
 
 
-game = None
+game = None # futur reference to the main game class instance
 
 
 class Button():
@@ -32,6 +32,9 @@ class Button():
     def set_callback(self, func):
         self.callback = func
     
+    def move(self, x, y):
+        self.rect.move_ip(x, y)
+    
     def click(self):
         if self.callback is not None:
             self.callback()
@@ -53,7 +56,7 @@ class Button():
         self.rect = self.normal_rect.copy()
         self.rect.center = center
     
-    def update(self, dt):
+    def update(self, dt=None):
         self.update_state()
         if self.hovered:
             if self.rect.width < self.max_size:
@@ -111,6 +114,79 @@ class AnimatedButton(Button):
             self.rect.height += 30
             self.rect.center = center
         return False
+
+
+class TexturedButton():
+    def __init__(self, center, image, image_hovered=None, image_clicked=None, callback=None):
+        self.image = image
+        self.image_hovered = image_hovered if image_hovered else image
+        self.image_clicked = image_clicked if image_clicked else image
+        self.rect = image.get_rect(center=center)
+        self.callback = callback
+        self.hovered = False
+        self.timer = 0
+    
+    def click(self):
+        self.timer = 200
+        if self.callback:
+            self.callback()
+    
+    def update(self, dt):
+        if self.timer > 0:
+            self.timer -= dt
+        if self.rect.collidepoint(c.MOUSE_POS):
+            self.hovered = True
+            if c.CLICK:
+                self.click()
+        else:
+            self.hovered = False
+    
+    def render(self, surf):
+        if self.timer > 0:
+            surf.blit(self.image_clicked, self.rect)
+        elif self.hovered:
+            surf.blit(self.image_hovered, self.rect)
+        else:
+            surf.blit(self.image, self.rect)
+
+
+# class SimpleButton():
+#     def __init__(self, center, text, callback=None, color='black'):
+#         self.image = pygame.font.Font(c.fp, 16).render(text, True, color)
+#         self.rect = self.image.get_rect(center=center)
+#         c.increase_rect(self.rect, (14, 10))
+        
+#         self.callback = callback
+#         self.color = color
+        
+#         self.min_size = self.rect.width
+#         self.max_size = self.rect.width + 8
+#         self.border_width = 2
+        
+#     def move(self, x, y):
+#         self.rect.move_ip(x, y)
+    
+#     def click(self):
+#         if self.callback is not None:
+#             self.callback()
+    
+#     def update(self, dt=None):
+#         if self.rect.collidepoint(c.MOUSE_POS):
+#             if self.rect.width < self.max_size:
+#                 c.increase_rect(self.rect, (2, 1))
+#                 self.border_width += 0.08
+#             if c.CLICK:
+#                 self.click()
+#                 return True
+#         else:
+#             if self.rect.width > self.min_size:
+#                 c.increase_rect(self.rect, (-2, -1))
+#                 self.border_width -= 0.08
+#         return False
+    
+#     def render(self, surf, y=0):
+#         c.blit_center(surf, self.image, (self.rect.centerx + 1, self.rect.centery - y + 2))
+#         pygame.draw.rect(surf, self.color, pygame.Rect(self.rect.x, self.rect.y - y, *self.rect.size), width=round(self.border_width), border_radius=15)
 
 
 class ClickableText(Button):
@@ -234,53 +310,57 @@ class Slider():
             c.blit_center(surf, self.text_img, self.text_co)
 
 
-class MissionLine():
-    def __init__(self, y, title, message, icon=None, progress_bar=False):
-        self.title = title
-        self.msg = message
-        
-        self.rect = pygame.Rect(50, y, c.WIN_SIZE[0] - 100, 70)
-        self.surface = pygame.Surface(self.rect.size, pygame.SRCALPHA)
-        
-        pygame.draw.rect(self.surface, (50., 50., 50., 120), (0, 0, *self.rect.size), border_radius=10)
-        pygame.draw.rect(self.surface, 'lightblue', (0, 0, *self.rect.size), width=3, border_radius=10)
-        
-        self.surface.blit(pygame.font.Font(c.fp, 17).render(title,   True, 'white'),     (70, 10 if progress_bar else 15))
-        self.surface.blit(pygame.font.Font(c.fp, 13).render(message, True, 'lightgray'), (70, 30 if progress_bar else 40))
-        
-        self.icon = icon if icon is not None else pygame.Surface((56, 56))
-        self.surface.blit(self.icon, (8, 7))
-        
-        if progress_bar:
-            self.have_progress_bar = True
-            self.font = pygame.font.Font(c.fp, 12)
-            self.value = 0.0
-            self.value_img = self.new_value_img()
-        else:
-            self.have_progress_bar = False
-        
-        self.ui_x = self.rect.x + 70
+class CellsBar():
+    def __init__(self, img, left, centery, max):
+        self.img = img
+        self.rect = self.img.get_rect(left=left, centery=centery)
+        self.level = 0
+        self.cell_y = self.rect.top + 4
+        self.max = max
     
-    def scroll(self, y):
-        self.rect.y += y
+    def set(self, level):
+        self.level = level
     
-    def set_value(self, value):
-        self.value = value
-        self.value_img = self.new_value_img()
-    
-    def new_value_img(self):
-        return self.font.render(str(round(self.value*100))+'%', True, 'lightblue')
+    def increment(self):
+        self.level = min(self.level + 1, self.max)
     
     def update(self, dt=None):
         pass
     
     def render(self, surf):
-        surf.blit(self.surface, self.rect)
-        if self.have_progress_bar:
-            if self.value:
-                pygame.draw.rect(surf, 'gold3', (self.ui_x + 2, self.rect.y + 49, self.value * (self.rect.width - 150) - 4, 11), border_radius=5)
-            pygame.draw.rect(surf, 'black', (self.ui_x, self.rect.y + 48, self.rect.width - 150, 13), width=2, border_radius=5)
-            c.blit_center(surf, self.value_img, (self.rect.right - 50, self.rect.y + 55))
+        surf.blit(self.img, self.rect)
+
+
+class Upgrader(CellsBar):
+    def __init__(self, left, centery):
+        super().__init__(game.asset.upgrade_bar, left, centery, 10)
+        self.colors = ['yellow', 'gold', 'orange', 'darkorange', 'tomato', 'orangered', 'red', 'crimson', 'firebrick', 'darkred']
+        self.cells = []
+        for i in range(self.max):
+            self.cells.append(c.swap_color(game.asset.upgrade_cell.copy(), 'white', self.colors[i]))
+    
+    def render(self, surf):
+        super().render(surf)
+        x = self.rect.right - 40
+        for i in range(self.level):
+            surf.blit(self.cells[i], (x, self.cell_y))
+            x -= 16
+
+
+class Container(CellsBar):
+    def __init__(self, left, centery):
+        super().__init__(game.asset.container_bar, left, centery, 3)
+        self.cell = c.swap_color(game.asset.container_cell.copy(), 'white', 'cyan')
+    
+    def decrement(self):
+        self.level = max(self.level - 1, 0)
+    
+    def render(self, surf):
+        super().render(surf)
+        x = self.rect.right - 56
+        for i in range(self.level):
+            surf.blit(self.cell, (x, self.cell_y))
+            x -= 32
 
 
 class SuccessLine():
@@ -344,22 +424,15 @@ class PopUp():
     speed = 20
     time  = 2000
     width = 280
-    def __init__(self, type, text):
+    def __init__(self, text):
         self.rect = pygame.Rect(c.WIN_SIZE[0], 70, self.width, 66)
         self.surface = pygame.Surface(self.rect.size, pygame.SRCALPHA)
         
         pygame.draw.rect(self.surface, (50., 50., 50., 120), (0, 0, *self.rect.size), border_radius=20)
         pygame.draw.rect(self.surface, 'lightblue', (0, 0, *self.rect.size), width=3, border_radius=20)
         
-        if type == 'success':
-            icon = game.icon_success
-            title = 'Achievement Unlocked'
-        else:
-            icon = game.icon_mission
-            title = 'Mission Complete'
-        
-        self.surface.blit(icon, (5, 5))
-        self.surface.blit(pygame.font.Font(c.fp, 15).render(title, True, 'white'), (65, 15))
+        self.surface.blit(game.asset.icon_success, (5, 5))
+        self.surface.blit(pygame.font.Font(c.fp, 15).render('Achievement Unlocked', True, 'white'), (65, 15))
         self.surface.blit(pygame.font.Font(c.fp, 15).render(text, True, 'lightgray'), (65, 37))
         
         self.timer = 0
@@ -387,3 +460,97 @@ class PopUp():
     
     def render(self, surf):
         surf.blit(self.surface, self.rect)
+
+
+class EffectsHud():
+    def __init__(self):
+        self.start_angle_f = 2.487
+        self.start_angle_r = 0.654
+        self.step_angle = 0.393
+        self.gap = self.step_angle + 0.1
+        
+        self.freeze = game.gd.freezes
+        self.repulsion = game.gd.repulsions
+        
+        self.show_ti = 0
+        self.losing_f = 0
+        self.losing_r = 0
+        
+        self._rect = None
+    
+    @property
+    def rect(self):
+        if self._rect:
+            return self._rect
+        else:
+            self._rect = (game.player.rect.left - 37, game.player.rect.y - 37, 124, 124)
+            return self._rect
+    
+    def show(self):
+        self.show_ti = 3000
+    
+    def lose_freeze(self):
+        self.losing_f = 1500
+    
+    def lose_repulsion(self):
+        self.losing_r = 1500
+    
+    def stop(self):
+        self.show_ti = self.effect_ti = 0
+        if self.losing_f > 0:
+            self.losing_f = 0
+            self.freeze -= 1
+        if self.losing_r > 0:
+            self.losing_r = 0
+            self.repulsion -= 1
+    
+    def update(self, dt, surf):
+        visible = self.show_ti > 0
+        self._rect = None
+        
+        if game.power_timer > 0:
+            self.render_timer(surf)
+        
+        if self.losing_f > 0:
+            self.losing_f -= dt
+            self.render_freeze(surf, losing=True)
+            if self.losing_f <= 0:
+                self.losing_f = 0
+                self.freeze -= 1
+        
+        elif visible:
+            self.render_freeze(surf)
+        
+        if self.losing_r > 0:
+            self.losing_r -= dt
+            self.render_repulsion(surf, losing=True)
+            if self.losing_r <= 0:
+                self.losing_r = 0
+                self.repulsion -= 1
+        
+        elif visible:
+            self.render_repulsion(surf)
+        
+        if visible:
+            self.show_ti -= dt
+    
+    def render_freeze(self, surf, losing=False):
+        if losing:
+            color = 'white' if (self.losing_f // 400) % 2 == 0 else 'darkred'
+            pygame.draw.arc(surf, color, self.rect, self.start_angle_f, self.start_angle_f + self.step_angle, 5)
+        for i in range(0 if not losing else 1, self.freeze):
+            d = self.gap * i
+            pygame.draw.arc(surf, 'lightblue', self.rect, self.start_angle_f + d, self.start_angle_f + self.step_angle + d, 5)
+    
+    def render_repulsion(self, surf, losing=False):
+        if losing:
+            color = 'white' if (self.losing_r // 400) % 2 == 0 else 'darkred'
+            pygame.draw.arc(surf, color, self.rect, self.start_angle_r - self.step_angle, self.start_angle_r, 5)
+        for i in range(0 if not losing else 1, self.repulsion):
+            d = self.gap * i
+            pygame.draw.arc(surf, 'orangered', self.rect, self.start_angle_r - self.step_angle - d, self.start_angle_r - d, 5)
+    
+    def render_timer(self, surf):
+        rect = (game.player.rect.left - 30, game.player.rect.top - 30, 110, 110)
+        end = c.PI_2 - max(1 - game.power_timer / c.POWER_DELAY, 0) * c.TWO_PI
+        pygame.draw.arc(surf, 'gold', rect, c.PI_2, end, 2)
