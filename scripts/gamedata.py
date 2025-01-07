@@ -43,7 +43,7 @@ class SuccessManager():
         if not id in self.unlocked:
             self.unlocked.append(id)
             self.success[id].unlock()
-            self.game.set_popup('success', self.success[id].title)
+            self.game.set_popup(self.success[id].title)
 
 
 class GameDataManager():

@@ -160,8 +160,8 @@ class Game():
         self.freeze = duration
         self.super_magnet = 0
     
-    def set_popup(self, type, message):
-        self.popup = gui.PopUp(type, message)
+    def set_popup(self, message):
+        self.popup = gui.PopUp(message)
     
     def start_game(self):
         self.menu_active = False
